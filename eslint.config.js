@@ -26,6 +26,17 @@ export default tseslint.config(
   ...svelte.configs['flat/prettier'],
   {
     plugins: { import: importPlugin },
+    // import/no-cycle が TypeScript / Svelte の import を解決できるよう resolver を設定する
+    // （これが無いと .ts の循環依存がサイレントに素通りする / repository-structure 5.3）
+    settings: {
+      'import/parsers': { '@typescript-eslint/parser': ['.ts', '.svelte'] },
+      'import/resolver': {
+        typescript: {
+          project: ['tsconfig.json', 'tsconfig.scripts.json'],
+          noWarnOnMultipleProjects: true,
+        },
+      },
+    },
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',

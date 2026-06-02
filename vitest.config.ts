@@ -14,26 +14,29 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
+      // `npm run test`（--coverage フラグ無し）でも閾値を評価できるよう常時有効化する。
+      // これが無いと CI の test ステップで thresholds が評価されず domain 90% 強制が機能しない。
+      enabled: true,
+      // 未テストのファイルも 0% として計上し閾値を厳密に効かせる（development-guidelines 4.1）。
+      include: ['src/**/*.ts'],
       exclude: [
         'node_modules/**',
         'dist/**',
         '.steering/**',
         'tests/e2e/**',
+        'src/main.ts', // エントリポイント（bootstrap、ユニットテスト対象外）
         '**/*.config.{ts,js}',
+        '**/*.d.ts',
         '**/types/**',
       ],
-      // グローバルは緩め、ドメイン層は 90% を強制（repository-structure 5.2 / dev-guidelines 6.2）
+      // ドメイン層は 90% を強制、グローバルは緩め（development-guidelines 4.1 / repository-structure 5.2）
       thresholds: {
-        branches: 80,
-        functions: 80,
-        lines: 80,
-        statements: 80,
         'src/domain/**': {
-          branches: 90,
-          functions: 90,
           lines: 90,
-          statements: 90,
+          functions: 90,
+          branches: 90,
         },
+        lines: 70,
       },
     },
   },

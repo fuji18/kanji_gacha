@@ -12,3 +12,8 @@ node_modules/
 
 # ビルド成果物
 dist/
+dev-dist/
+coverage/
+
+# 生成JSON（整形・lint対象外 / repository-structure 8.2）
+public/data/
