@@ -17,3 +17,6 @@ coverage/
 
 # 生成JSON（整形・lint対象外 / repository-structure 8.2）
 public/data/
+
+# 蒸留済み元データ（圧縮配置・整形対象外 / repository-structure 2.6）
+data-sources/*.json
