@@ -18,10 +18,10 @@ Vite + Svelte 5 + TypeScript の最小プロジェクトを立ち上げ、リポ
 - `README.md`・`LICENSE`・`.gitignore`（repository-structure 8.1準拠）
 
 ## 受け入れ条件
-- [ ] `npm ci && npm run dev` でローカル起動する
-- [ ] `npm run build` が成功し `dist/` が生成される
-- [ ] ディレクトリ骨格がリポジトリ構造定義書1章と一致
-- [ ] `tsconfig.scripts.json` から `src/domain` を型解決できる
+- [x] `npm ci && npm run dev` でローカル起動する
+- [x] `npm run build` が成功し `dist/` が生成される
+- [x] ディレクトリ骨格がリポジトリ構造定義書1章と一致
+- [x] `tsconfig.scripts.json` から `src/domain` を型解決できる
 
 ## スコープ外
 - ドメインロジック・UI本実装（後続チケット）
@@ -30,4 +30,4 @@ Vite + Svelte 5 + TypeScript の最小プロジェクトを立ち上げ、リポ
 - `npm run build` がCIで通ること（T-002で自動化）
 
 ## 完了の定義 (DoD)
-- [ ] build/dev がパス、骨格がドキュメントと整合
+- [x] build/dev がパス、骨格がドキュメントと整合
