@@ -23,7 +23,7 @@
 
 | ID | タイトル | Phase | 優先 | 依存 | PRD | 状態 |
 |---|---|---|---|---|---|---|
-| [T-001](./T-001-project-scaffold.md) | プロジェクトscaffold | 0 | P0 | — | — | 🏗️ |
+| [T-001](./T-001-project-scaffold.md) | プロジェクトscaffold | 0 | P0 | — | — | ✅ |
 | [T-002](./T-002-quality-ci.md) | 品質ツール・CIパイプライン | 0 | P0 | — | — | 🔲 |
 | [T-003](./T-003-data-generation.md) | データ生成パイプライン | 0 | P0 | — | F2 | 🔲 |
 | [T-004](./T-004-data-verification.md) | データ検証ゲート | 0 | P0 | T-003 | — | 🔲 |

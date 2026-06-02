@@ -12,6 +12,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# vite-plugin-pwa の開発時SW生成物（repository-structure 8.1）
+dev-dist/
+
 # Environment variables
 .env
 .env.local
