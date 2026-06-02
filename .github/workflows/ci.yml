@@ -1,0 +1,28 @@
+name: CI
+
+# main/develop への push と全PRで品質ゲートを実行する（development-guidelines 6.2）。
+# 失敗時はマージ不可。各ステップの順序（lint→typecheck→gen:data→verify:data→
+# test→build→playwright install→e2e）は変更しないこと。
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint # ドメイン純粋性・import境界・循環依存も検出
+      - run: npm run typecheck
+      - run: npm run gen:data # 辞書生成 → public/data/*.json を出力（後続の入力）
+      - run: npm run verify:data # gen:data の出力を検証（詰み率・N・MAX_PARTS）。順序変更禁止
+      - run: npm run test # ユニット＋カバレッジ（vitest.config.ts の thresholds で domain 90% 強制）
+      - run: npm run build # Viteビルド（public/data/*.json をアセットに同梱）
+      - run: npx playwright install --with-deps chromium # E2Eのブラウザ（CI必須）
+      - run: npm run test:e2e # デイリー再現性ほか
