@@ -15,7 +15,7 @@
     "test": "vitest run --passWithNoTests",
     "test:e2e": "playwright test",
     "gen:data": "tsx --tsconfig tsconfig.scripts.json scripts/build-data/generate.ts",
-    "verify:data": "tsx --tsconfig tsconfig.scripts.json scripts/build-data/simulateStuckRate.ts",
+    "verify:data": "tsx --tsconfig tsconfig.scripts.json scripts/build-data/verify.ts",
     "prepare": "husky"
   },
   "lint-staged": {
