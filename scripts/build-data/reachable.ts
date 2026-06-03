@@ -78,7 +78,11 @@ export function computeReachable(data: GeneratedData): ReachableResult {
   };
 }
 
-/** CLI から呼ばれる：reachable.json を書き出して結果を返す */
+/**
+ * CLI から呼ばれる：reachable.json を書き出して結果を返す。
+ * `verify.ts` はロード済みデータを渡す（二重ロードしない）。デフォルト引数は
+ * 本モジュールを単独 CLI として直接実行する将来用途のためのもの。
+ */
 export function runReachable(
   data: GeneratedData = loadGenerated()
 ): ReachableResult {

@@ -10,7 +10,11 @@
  * （`KG_ENFORCE_STUCK_RATE=1` でハードゲート化）。本モジュールは純粋な計測・判定を担う。
  */
 
-import { RARITY_RATES } from '../../src/domain/constants';
+import {
+  GACHA_COUNT,
+  HAND_CAP,
+  RARITY_RATES,
+} from '../../src/domain/constants';
 import type { Level, Part, Rarity, Rng } from '../../src/domain/types';
 import { LEVELS, LEVEL_RANK } from './levels';
 import type { GeneratedData } from './loadGenerated';
@@ -38,7 +42,14 @@ export interface StuckRateResult {
   trials: number;
 }
 
-const DEFAULTS = { seed: 20260603, trials: 2000, gacha: 10, handCap: 12 };
+// gacha/handCap は実際のゲーム設定（src/domain）を参照し、シミュレーションが
+// 実プレイ条件と乖離しないようにする（development-guidelines 2.2・値の一元管理）。
+const DEFAULTS = {
+  seed: 20260603,
+  trials: 2000,
+  gacha: GACHA_COUNT,
+  handCap: HAND_CAP,
+};
 
 /** 合体エントリを「部品マルチセット＋result最小ランク」に前処理 */
 interface PreparedEntry {
