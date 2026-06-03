@@ -1,0 +1,24 @@
+KANJIDIC2 / KRADFILE — License notice
+=====================================
+
+The kanji information distilled into `kanjidic2-joyo.json` is derived from the
+KANJIDIC2 dictionary file. KANJIDIC2 (and the related KRADFILE) are the property
+of the Electronic Dictionary Research and Development Group (EDRDG), and are used
+in conformance with the Group's licence.
+
+  - Project: KANJIDIC / KANJIDIC2 / KRADFILE
+  - Copyright: Electronic Dictionary Research and Development Group (EDRDG)
+  - Licence: Creative Commons Attribution-ShareAlike 4.0 International
+             (CC BY-SA 4.0)  https://creativecommons.org/licenses/by-sa/4.0/
+  - Home: https://www.edrdg.org/  /  https://www.edrdg.org/wiki/index.php/KANJIDIC_Project
+
+Fields used (KANJIDIC2-derived): character, stroke count, grade, frequency rank,
+on/kun readings, English meanings.
+
+Per the ShareAlike (SA) obligation, derived data distributed in this repository
+(`public/data/*.json`) is provided under CC BY-SA 4.0. See `public/data/LICENSE.txt`.
+
+NOTE: In this repository the upstream EDRDG host (edrdg.org) is not reachable from
+the build/CI network. The KANJIDIC2-derived fields were obtained from a public
+mirror of the same CC BY-SA data and distilled into `kanjidic2-joyo.json`. The
+EDRDG licence and attribution above continue to apply.
