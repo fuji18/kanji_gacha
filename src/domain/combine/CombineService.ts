@@ -6,6 +6,7 @@ import type {
   KanjiEntry,
   Level,
 } from '../types';
+import { MAX_COMBINE_PARTS } from '../constants';
 import { makeKey } from './makeKey';
 import { selectPrimary } from './selectPrimary';
 
@@ -18,6 +19,31 @@ const LEVEL_RANK: Record<Level, number> = {
   juniorhigh: 1,
   joyo: 2,
 };
+
+/**
+ * 配列から `size` 個を選ぶ組み合わせ（部分集合）を辞書順に列挙するジェネレータ。
+ * 詰み判定・ヒント探索（機能設計4.5）で手札の部分集合を総当たりするために使う。
+ * index ベースで生成するため、同一部品が複数枚（同じ partId）あっても別インスタンスと
+ * して正しく扱える（マルチセット手札に対応）。
+ *
+ * @param items 元の配列（手札）
+ * @param size 選ぶ個数（1〜items.length で有効。範囲外は何も yield しない）
+ */
+function* combinations<T>(items: readonly T[], size: number): Generator<T[]> {
+  const n = items.length;
+  if (size <= 0 || size > n) return;
+  // 選択中インデックス（昇順を維持）。初期は [0,1,...,size-1]
+  const idx = Array.from({ length: size }, (_, i) => i);
+  for (;;) {
+    yield idx.map((i) => items[i]);
+    // 末尾から、まだ右に進められる桁を探す
+    let k = size - 1;
+    while (k >= 0 && idx[k] === n - size + k) k--;
+    if (k < 0) return; // 全組み合わせを列挙し終えた
+    idx[k]++;
+    for (let j = k + 1; j < size; j++) idx[j] = idx[j - 1] + 1;
+  }
+}
 
 /**
  * 漢字の学年区分が、現在のセッションレベルの scope に含まれるか判定する。
@@ -73,5 +99,46 @@ export class CombineService {
     const awarded = selectPrimary(inScope);
     const altInScope = inScope.filter((k) => k.char !== awarded.char);
     return { entry, awarded, altInScope };
+  }
+
+  /**
+   * 手札に合体可能な組み合わせが1つでも存在するか判定する（機能設計4.5）。
+   * F6 終了判定（詰み）と F5 ヒントの両方が依存する基盤。最初の成立で打ち切るため、
+   * 詰みでない手札ほど速く返る。
+   *
+   * @param hand 現在の手札
+   * @param level 現在のレベル
+   * @returns 成立する組が1つでもあれば true、無ければ false（＝詰み）
+   */
+  canCombineAny(hand: HandPart[], level: Level): boolean {
+    return this.firstCombinable(hand, level) !== null;
+  }
+
+  /**
+   * 合体可能な組み合わせを1組返す（機能設計4.5・F5 ヒント）。最小サイズ（部品数が
+   * 少ない組）を優先して返すため、プレイヤーに分かりやすいヒントになる。
+   *
+   * @param hand 現在の手札
+   * @param level 現在のレベル
+   * @returns 成立する部品の組（`resolve` で成立を保証）。無ければ null
+   */
+  findHint(hand: HandPart[], level: Level): HandPart[] | null {
+    return this.firstCombinable(hand, level);
+  }
+
+  /**
+   * 手札の部分集合を**サイズ昇順**（2〜`MAX_COMBINE_PARTS`）に総当たりし、最初に成立した
+   * 組を返す。`canCombineAny` と `findHint` の共通エンジン（早期return を1箇所に集約）。
+   * 探索量は手札12・上限5で ΣC(12,k)（k=2..5）≈ 1,573 通り。各判定は `makeKey`→
+   * `Map.get` の O(1) で、最初の成立で打ち切るため十分高速（目標5ms以下・機能設計4.5）。
+   */
+  private firstCombinable(hand: HandPart[], level: Level): HandPart[] | null {
+    const maxSize = Math.min(MAX_COMBINE_PARTS, hand.length);
+    for (let size = 2; size <= maxSize; size++) {
+      for (const subset of combinations(hand, size)) {
+        if (this.resolve(subset, level)) return subset;
+      }
+    }
+    return null;
   }
 }
