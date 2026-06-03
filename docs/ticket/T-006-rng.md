@@ -16,9 +16,9 @@
 - `src/domain/rng/dailySeed.ts`：`todayYmdJst(nowMs)`（JST+9固定でYYYYMMDD）/ `dailySeed(ymd)`
 
 ## 受け入れ条件
-- [ ] 同一シードで `mulberry32` が同一乱数列を返す
-- [ ] `todayYmdJst` がlocale非依存でJST基準（境界：JST 0:00で日付が変わる）
-- [ ] `nowMs` は引数注入。`Date.now()` をモジュール内で呼ばない（lint強制）
+- [x] 同一シードで `mulberry32` が同一乱数列を返す
+- [x] `todayYmdJst` がlocale非依存でJST基準（境界：JST 0:00で日付が変わる）
+- [x] `nowMs` は引数注入。`Date.now()` をモジュール内で呼ばない（lint強制）
 
 ## スコープ外
 - RNGの生成・注入（T-014のSessionManager）
@@ -28,4 +28,4 @@
 - JST境界（UTC 14:59→15:00相当）で日付が切り替わる
 
 ## 完了の定義 (DoD)
-- [ ] 決定性テストが緑、domain純粋性lintをパス
+- [x] 決定性テストが緑、domain純粋性lintをパス

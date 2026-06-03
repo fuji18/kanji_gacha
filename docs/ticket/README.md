@@ -28,7 +28,7 @@
 | [T-003](./T-003-data-generation.md) | データ生成パイプライン | 0 | P0 | — | F2 | 🔲 |
 | [T-004](./T-004-data-verification.md) | データ検証ゲート | 0 | P0 | T-003 | — | 🔲 |
 | [T-005](./T-005-domain-types-constants.md) | ドメイン型＋定数 | 1 | P0 | T-001 | — | 🔲 |
-| [T-006](./T-006-rng.md) | RNG（mulberry32・dailySeed） | 1 | P0 | T-005 | F8 | 🔲 |
+| [T-006](./T-006-rng.md) | RNG（mulberry32・dailySeed） | 1 | P0 | T-005 | F8 | ✅ |
 | [T-007](./T-007-combine-engine.md) | 合体エンジン | 1 | P0 | T-005 | F2 | 🔲 |
 | [T-008](./T-008-stuck-hint.md) | 詰み判定・ヒント探索 | 1 | P0 | T-007 | F5,F6 | 🔲 |
 | [T-009](./T-009-gacha-draw.md) | ガチャ抽選 | 1 | P0 | T-005,T-006 | F1 | 🔲 |
