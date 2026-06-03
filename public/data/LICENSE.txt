@@ -1,0 +1,16 @@
+漢字合体ガチャ（仮称） — 生成辞書のライセンス表記
+====================================================
+
+public/data/ の生成物（kanji.json / parts.json / combine-dict.json）は、
+下記の CC BY-SA データから生成した二次的著作物です。ShareAlike（継承）
+義務により、本生成物を Creative Commons 表示-継承 4.0 国際
+(CC BY-SA 4.0) https://creativecommons.org/licenses/by-sa/4.0/ で提供します。
+
+元データ・クレジット:
+  - KANJIDIC2 / KRADFILE  (c) Electronic Dictionary Research and Development
+    Group (EDRDG) — CC BY-SA 4.0 — https://www.edrdg.org/
+    （漢字の読み・意味・画数・学年・頻度）
+  - KanjiVG  (c) Ulrich Apel and contributors — CC BY-SA 3.0 —
+    https://kanjivg.tagaini.net/  （部品分解・KRADFILE の代替）
+
+ライセンス原本は data-sources/LICENSE-EDRDG.txt / LICENSE-KANJIVG.txt を参照。

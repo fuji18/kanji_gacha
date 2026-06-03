@@ -22,11 +22,11 @@ KANJIDIC2 + KRADFILE から、実行時に使う3つのJSON辞書を生成する
 - `npm run gen:data`（`tsx --tsconfig tsconfig.scripts.json`）
 
 ## 受け入れ条件
-- [ ] 3つのJSONが生成され、圧縮後合計 約100KB以内
-- [ ] `combine-dict.json` のkeyが配置不問で正規化されている（例 `木+木`→林）
-- [ ] 複数解が `results` 配列で保持される（例 日+月→明/朙）
-- [ ] 常用外の漢字が含まれない
-- [ ] `public/data/LICENSE.txt` にCC BY-SA表記がある
+- [x] 3つのJSONが生成され、圧縮後合計 約100KB以内（実測 gzip 約91KB）
+- [x] `combine-dict.json` のkeyが配置不問で正規化されている（例 `木+木`→林）
+- [x] 複数解が `results` 配列で保持される（16件・例 `⻌+豕`→逐/遂）
+- [x] 常用外の漢字が含まれない（results/primary ⊆ kanji.json をテストで保証）
+- [x] `public/data/LICENSE.txt` にCC BY-SA表記がある
 
 ## スコープ外
 - 到達可能N・MAX_PARTS・詰み率の検証（T-004）
@@ -35,4 +35,10 @@ KANJIDIC2 + KRADFILE から、実行時に使う3つのJSON辞書を生成する
 - 既知の合体（林・明・好・詩・樹）が辞書に存在することのアサート
 
 ## 完了の定義 (DoD)
-- [ ] `npm run gen:data` で再現可能に生成、ライセンス整備
+- [x] `npm run gen:data` で再現可能に生成、ライセンス整備
+
+## 補足（元データの代替）
+機能設計は KANJIDIC2 + KRADFILE を想定するが、ビルド/CI 環境のネットワーク
+許可リストで edrdg.org が遮断されているため、同等の CC BY-SA データ（KANJIDIC2
+由来の漢字情報 ＋ KRADFILE 代替の **KanjiVG** 分解）を `data-sources/` に蒸留して
+同梱し、オフラインで再現生成する構成とした。詳細は `data-sources/README.md`。
