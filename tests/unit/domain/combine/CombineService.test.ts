@@ -116,3 +116,101 @@ describe('CombineService.resolve', () => {
     expect(service.resolve(hand('x', 'y'), 'joyo')).toBeNull();
   });
 });
+
+// T-008 詰み判定・ヒント探索（機能設計4.5・PRD F5/F6）。
+// canCombineAny / findHint は resolve を再利用した部分集合総当たり。
+
+describe('CombineService.canCombineAny', () => {
+  it('合体可能な手札で true（2部品ペアが成立）', () => {
+    const service = buildService();
+    expect(service.canCombineAny(hand('hi', 'tsuki'), 'elementary')).toBe(true);
+  });
+
+  it('余分な部品が混ざっていても部分集合から成立を見つけて true', () => {
+    const service = buildService();
+    // zzz は無関係な部品。部分集合 {hi,tsuki} が成立する
+    expect(
+      service.canCombineAny(hand('hi', 'tsuki', 'zzz'), 'elementary')
+    ).toBe(true);
+  });
+
+  it('詰み手札（どの組み合わせも成立しない）で false', () => {
+    const service = buildService();
+    expect(service.canCombineAny(hand('zzz', 'qqq', 'www'), 'joyo')).toBe(
+      false
+    );
+  });
+
+  it('手札が2枚未満なら false', () => {
+    const service = buildService();
+    expect(service.canCombineAny(hand('hi'), 'elementary')).toBe(false);
+    expect(service.canCombineAny([], 'elementary')).toBe(false);
+  });
+
+  it('3部品のみで成立する手札（2部品ペアが無い）でも true', () => {
+    const service = buildService();
+    expect(
+      service.canCombineAny(hand('ki', 'kotsuzumi', 'sun'), 'juniorhigh')
+    ).toBe(true);
+  });
+
+  it('scope 外の漢字しか作れない手札は false（レベル境界）', () => {
+    const service = buildService();
+    // ki+kusa=某 は juniorhigh。elementary では scope 外 → 詰み扱い
+    expect(service.canCombineAny(hand('ki', 'kusa'), 'elementary')).toBe(false);
+    expect(service.canCombineAny(hand('ki', 'kusa'), 'juniorhigh')).toBe(true);
+  });
+
+  it('同一部品が複数枚あっても別インスタンスとして部分集合を作れる', () => {
+    const service = buildService();
+    // hi が2枚。{hi(0),tsuki} / {hi(1),tsuki} のどちらかで 明 が成立
+    expect(service.canCombineAny(hand('hi', 'hi', 'tsuki'), 'elementary')).toBe(
+      true
+    );
+  });
+});
+
+describe('CombineService.findHint', () => {
+  it('返したヒントは実際に resolve で成立する（妥当性）', () => {
+    const service = buildService();
+    const hint = service.findHint(hand('hi', 'tsuki', 'zzz'), 'elementary');
+    expect(hint).not.toBeNull();
+    expect(service.resolve(hint!, 'elementary')?.awarded.char).toBe('明');
+  });
+
+  it('最小サイズの組を優先して返す（2部品 vs 3部品が両立する手札）', () => {
+    const service = buildService();
+    // {hi,tsuki}=明（2部品）と {ki,kotsuzumi,sun}=樹（3部品）が両立
+    const hint = service.findHint(
+      hand('hi', 'tsuki', 'ki', 'kotsuzumi', 'sun'),
+      'juniorhigh'
+    );
+    expect(hint).toHaveLength(2);
+    expect(service.resolve(hint!, 'juniorhigh')?.awarded.char).toBe('明');
+  });
+
+  it('3部品のみ成立する手札では3部品の組を返す', () => {
+    const service = buildService();
+    const hint = service.findHint(hand('ki', 'kotsuzumi', 'sun'), 'juniorhigh');
+    expect(hint).toHaveLength(3);
+    expect(service.resolve(hint!, 'juniorhigh')?.awarded.char).toBe('樹');
+  });
+
+  it('詰み手札では null を返す', () => {
+    const service = buildService();
+    expect(service.findHint(hand('zzz', 'qqq'), 'joyo')).toBeNull();
+  });
+
+  it('満杯手札（12枚・成立組なし）でも早期returnで高速に false/null', () => {
+    const service = buildService();
+    // 辞書に存在しない部品で12枚埋める（最悪ケースの探索量 ≈ 1,573通り）
+    const fullHand = hand(...Array.from({ length: 12 }, (_, i) => `none${i}`));
+    const start = performance.now();
+    const stuck = service.canCombineAny(fullHand, 'joyo');
+    const elapsed = performance.now() - start;
+    expect(stuck).toBe(false);
+    expect(service.findHint(fullHand, 'joyo')).toBeNull();
+    // 感覚値：全探索しても十分高速（目標5ms以下。CI揺らぎを見て緩めに50ms）
+    expect(elapsed).toBeLessThan(50);
+  });
+});

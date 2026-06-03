@@ -30,7 +30,7 @@
 | [T-005](./T-005-domain-types-constants.md) | ドメイン型＋定数 | 1 | P0 | T-001 | — | 🔲 |
 | [T-006](./T-006-rng.md) | RNG（mulberry32・dailySeed） | 1 | P0 | T-005 | F8 | ✅ |
 | [T-007](./T-007-combine-engine.md) | 合体エンジン | 1 | P0 | T-005 | F2 | 🔲 |
-| [T-008](./T-008-stuck-hint.md) | 詰み判定・ヒント探索 | 1 | P0 | T-007 | F5,F6 | 🔲 |
+| [T-008](./T-008-stuck-hint.md) | 詰み判定・ヒント探索 | 1 | P0 | T-007 | F5,F6 | ✅ |
 | [T-009](./T-009-gacha-draw.md) | ガチャ抽選 | 1 | P0 | T-005,T-006 | F1 | 🔲 |
 | [T-010](./T-010-score-rank.md) | スコア・コンボ・称号 | 1 | P0 | T-005 | F4,F6 | 🔲 |
 | [T-011](./T-011-rescue.md) | 救済（ヒント・捨てて引き直す） | 1 | P0 | T-008,T-009 | F5 | 🔲 |
