@@ -6,6 +6,8 @@ import {
   MAX_COMBINE_PARTS,
   RARITY_RATES,
   RANK_TABLE,
+  HINT_COST,
+  DISCARD_COST,
 } from '../../src/domain/constants';
 import type { Level } from '../../src/domain/types';
 
@@ -72,6 +74,32 @@ describe('domain constants', () => {
 
     it('手札上限は合体探索上限以上（探索が手札に収まる・機能設計4.5）', () => {
       expect(HAND_CAP).toBeGreaterThanOrEqual(MAX_COMBINE_PARTS);
+    });
+  });
+
+  describe('救済コスト（HINT_COST / DISCARD_COST・機能設計5.1）', () => {
+    const levels: Level[] = ['elementary', 'juniorhigh', 'joyo'];
+
+    it('HINT_COST は elementary/juniorhigh が非負整数、joyo は利用不可(null)', () => {
+      expect(HINT_COST.elementary).toBeGreaterThanOrEqual(0);
+      expect(Number.isInteger(HINT_COST.elementary)).toBe(true);
+      expect(HINT_COST.juniorhigh).toBeGreaterThanOrEqual(0);
+      expect(Number.isInteger(HINT_COST.juniorhigh)).toBe(true);
+      expect(HINT_COST.joyo).toBeNull();
+    });
+
+    it('DISCARD_COST は全レベルで非負整数', () => {
+      for (const level of levels) {
+        expect(DISCARD_COST[level]).toBeGreaterThanOrEqual(0);
+        expect(Number.isInteger(DISCARD_COST[level])).toBe(true);
+      }
+    });
+
+    it('難易度が上がるほどコストは増える（やさ ≤ ふつう ≤ むず・捨てる）', () => {
+      expect(DISCARD_COST.elementary).toBeLessThanOrEqual(
+        DISCARD_COST.juniorhigh
+      );
+      expect(DISCARD_COST.juniorhigh).toBeLessThanOrEqual(DISCARD_COST.joyo);
     });
   });
 });
