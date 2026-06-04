@@ -1,0 +1,109 @@
+import { describe, it, expect } from 'vitest';
+import {
+  CURRENT_SCHEMA_VERSION,
+  defaultState,
+  migrate,
+} from '../../../src/data/migrations';
+
+// migrations の受け入れ条件（T-013 / 機能設計5.2・問題6・新問題C）を固定する。
+//  - v0（altDiscovered なし）→ v1 で {} 補完
+//  - 欠損トップレベルは既定で補完、型不整合は既定に置換
+//  - 復元不能な破損は throw（loadState が既定初期化に使う）
+
+describe('defaultState', () => {
+  it('現行スキーマの空状態を返す', () => {
+    const s = defaultState();
+    expect(s.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(s.zukan).toEqual({ discovered: {}, altDiscovered: {} });
+    expect(s.bestScores).toEqual({ elementary: 0, juniorhigh: 0, joyo: 0 });
+    expect(s.dailyBest).toEqual({});
+    expect(s.settings).toEqual({ hintAlwaysOn: false });
+  });
+
+  it('呼び出しごとに独立したオブジェクトを返す（共有参照しない）', () => {
+    const a = defaultState();
+    const b = defaultState();
+    a.bestScores.joyo = 100;
+    a.zukan.discovered['林'] = { firstAt: 'x', count: 1 };
+    expect(b.bestScores.joyo).toBe(0);
+    expect(b.zukan.discovered).toEqual({});
+  });
+});
+
+describe('migrate v0 → v1（altDiscovered 補完・新問題C）', () => {
+  it('schemaVersion 無し・altDiscovered 無しの旧データを {} 補完して v1 にする', () => {
+    const v0 = {
+      zukan: { discovered: { 林: { firstAt: '2026-01-01', count: 2 } } },
+      bestScores: { elementary: 30, juniorhigh: 0, joyo: 0 },
+      dailyBest: { '20260101': 30 },
+      settings: { hintAlwaysOn: true },
+      // schemaVersion / altDiscovered なし
+    };
+    const m = migrate(v0);
+    expect(m.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(m.zukan.altDiscovered).toEqual({}); // 補完
+    expect(m.zukan.discovered['林']).toEqual({
+      firstAt: '2026-01-01',
+      count: 2,
+    });
+    expect(m.bestScores.elementary).toBe(30);
+    expect(m.dailyBest['20260101']).toBe(30);
+    expect(m.settings.hintAlwaysOn).toBe(true);
+  });
+});
+
+describe('migrate 欠損補完・型防御', () => {
+  it('トップレベル欠損は既定で補完する', () => {
+    const m = migrate({ schemaVersion: 1 }); // 中身ほぼ空
+    expect(m).toEqual(defaultState());
+  });
+
+  it('型が壊れたフィールドは既定に置換する（防御）', () => {
+    const m = migrate({
+      schemaVersion: 1,
+      zukan: 'broken',
+      bestScores: { elementary: 'NaN', joyo: 50 }, // elementary は不正→既定0
+      dailyBest: { '20260101': 'x', '20260102': 40 }, // 不正値は除外
+      settings: 12345,
+    });
+    expect(m.zukan).toEqual({ discovered: {}, altDiscovered: {} });
+    expect(m.bestScores.elementary).toBe(0);
+    expect(m.bestScores.joyo).toBe(50);
+    expect(m.dailyBest).toEqual({ '20260102': 40 });
+    expect(m.settings).toEqual({ hintAlwaysOn: false });
+  });
+
+  it('settings がオブジェクトでも hintAlwaysOn が非boolなら既定に置換', () => {
+    const m = migrate({ schemaVersion: 1, settings: { hintAlwaysOn: 'yes' } });
+    expect(m.settings.hintAlwaysOn).toBe(false);
+  });
+
+  it('discovered の不正エントリ（欠損フィールド）は捨てる', () => {
+    const m = migrate({
+      schemaVersion: 1,
+      zukan: {
+        discovered: {
+          林: { firstAt: '2026-01-01', count: 2 }, // OK
+          好: { count: 1 }, // firstAt 欠損 → 捨てる
+          明: 'x', // 非オブジェクト → 捨てる
+        },
+      },
+    });
+    expect(Object.keys(m.zukan.discovered)).toEqual(['林']);
+  });
+
+  it('未知の未来バージョン（>現行）も現行版へ正規化する（“偽の最新”を防ぐ）', () => {
+    const m = migrate({ schemaVersion: 99, settings: { hintAlwaysOn: true } });
+    expect(m.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    expect(m.settings.hintAlwaysOn).toBe(true); // フィールドは正規化される
+  });
+});
+
+describe('migrate 復元不能な破損', () => {
+  it('非オブジェクト（配列・プリミティブ・null）は throw する', () => {
+    expect(() => migrate(null)).toThrow();
+    expect(() => migrate('not json object')).toThrow();
+    expect(() => migrate(42)).toThrow();
+    expect(() => migrate([1, 2, 3])).toThrow();
+  });
+});
