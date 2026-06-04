@@ -61,13 +61,13 @@ export class DictionaryRepository {
   private poolByLevel: Record<Level, Part[]> | null = null;
   private reachable: ReachableMeta | null = null;
 
-  /**
-   * @param fetchFn fetch 抽象（既定は実 fetch）。テストではフェイクを注入する。
-   * @param baseUrl 取得元のベースURL（既定は `import.meta.env.BASE_URL`）。末尾は '/' 前提。
-   */
   /** 取得元のベースURL。末尾 '/' を保証して `${baseUrl}data/...` が常に正しく連結されるようにする。 */
   private readonly baseUrl: string;
 
+  /**
+   * @param fetchFn fetch 抽象（既定は実 fetch）。テストではフェイクを注入する。
+   * @param baseUrl 取得元のベースURL（既定は `import.meta.env.BASE_URL`）。末尾 '/' は内部で正規化する。
+   */
   constructor(
     private readonly fetchFn: FetchLike = defaultFetch,
     baseUrl: string = defaultBaseUrl()
