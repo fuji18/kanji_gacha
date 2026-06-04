@@ -39,3 +39,21 @@ export const RANK_TABLE = [
   { min: 60, name: '中級' },
   { min: 0, name: '見習い' },
 ] as const;
+
+/**
+ * 救済「ヒント」のレベル別コスト＝消費するガチャ残回数（暫定・要調整 PRD F5／機能設計5.1）。
+ * `null` は利用不可（むずかしい）。やさしいは無料・常時（0）。 */
+export const HINT_COST: Record<Level, number | null> = {
+  elementary: 0, // やさしい：無料・常時
+  juniorhigh: 1, // ふつう：ガチャ残 -1
+  joyo: null, // むずかしい：利用不可
+};
+
+/**
+ * 救済「捨てて引き直す」のレベル別コスト＝消費するガチャ残回数（暫定・要調整 PRD F5／機能設計5.1）。
+ * 補充ガチャ自体は通常のガチャ残を消費せず、このコストのみ減算する（機能設計7.3）。 */
+export const DISCARD_COST: Record<Level, number> = {
+  elementary: 0, // やさしい：無料
+  juniorhigh: 1, // ふつう：ガチャ残 -1
+  joyo: 2, // むずかしい：ガチャ残 -2
+};
