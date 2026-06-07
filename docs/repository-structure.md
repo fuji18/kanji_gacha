@@ -40,6 +40,7 @@ kanji_gacha/
 │   │   ├── SessionManager.ts      # 5.1 オーケストレーション・RNG生成と注入
 │   │   └── stores/
 │   │       ├── sessionStore.ts    # GameSession の Svelte store
+│   │       ├── routeStore.ts      # 現在画面（Screen型）＋ navigate（T-015）
 │   │       └── persistedStore.ts  # 図鑑・ベスト等のビュー
 │   ├── data/                      # データ層：辞書ロード・永続化
 │   │   ├── DictionaryRepository.ts# 静的JSON取得→Map展開（O(1)判定）

@@ -4,9 +4,12 @@ import svelte from 'eslint-plugin-svelte';
 import importPlugin from 'eslint-plugin-import';
 import prettierConfig from 'eslint-config-prettier';
 import svelteParser from 'svelte-eslint-parser';
+import globals from 'globals';
 
 // レイヤー間の一方向依存（repository-structure 5.1）を no-restricted-imports で強制する。
 // ui → app → domain / data の順で、下位・横レイヤーへの直接 import を禁止する。
+// 対象は src/{ui,app,domain,data}/** のみ。src/App.svelte・src/main.ts はエントリポイントとして
+// 全レイヤー横断が設計上許可されるため、これらのルールの対象外（意図的）。
 const layerImportRules = {
   // domain は最下層。上位・横レイヤー（app/ui/data）に依存してはならない。
   domain: ['**/app/**', '**/ui/**', '**/data/**'],
@@ -50,12 +53,19 @@ export default tseslint.config(
     },
   },
   {
-    // .svelte は svelte パーサで解析（Svelte 5 runes 対応）
+    // .svelte は svelte パーサで解析（Svelte 5 runes 対応）。ブラウザ globals も解決する。
     files: ['**/*.svelte'],
     languageOptions: {
       parser: svelteParser,
       parserOptions: { parser: tseslint.parser },
+      globals: { ...globals.browser },
     },
+  },
+  {
+    // ブラウザで動く実行時 TS（UI/アプリ/データ層・エントリ）はブラウザ globals を解決する
+    // （location/document/localStorage/fetch 等）。Node 専用の scripts/ には付与しない。
+    files: ['src/**/*.ts'],
+    languageOptions: { globals: { ...globals.browser } },
   },
   // --- レイヤー別 import 境界（repository-structure 5.1） ---
   {
