@@ -106,6 +106,21 @@ export interface GameSession {
   phase: 'playing' | 'ended';
 }
 
+/**
+ * 1プレイの終了結果（機能設計5.1・問題11）。Result 画面（T-019）が表示し、将来の結果シェア
+ * （F11・P1）はレベル・スコア・代表作成漢字からテキストを生成できる。`SessionManager.end` が返す。
+ */
+export interface GameResult {
+  level: Level;
+  mode: 'free' | 'daily';
+  score: number; // 最終スコア
+  rank: string; // 称号（resolveRank の結果）
+  createdKanji: string[]; // 作成漢字一覧（重複可・シェアの代表選定にも使う）
+  newlyDiscovered: string[]; // 今回新規に図鑑追加された漢字
+  reason: 'stuck' | 'empty_hand'; // 終了理由（KPI と一致）
+  durationMs: number; // 所要時間
+}
+
 // ===== 永続データ（localStorage・機能設計3.3） =====
 
 /** 図鑑状態。採点・コンプ対象は primary 漢字 */

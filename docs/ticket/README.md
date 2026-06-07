@@ -36,7 +36,7 @@
 | [T-011](./T-011-rescue.md) | 救済（ヒント・捨てて引き直す） | 1 | P0 | T-008,T-009 | F5 | ✅ |
 | [T-012](./T-012-dictionary-repository.md) | DictionaryRepository | 2 | P0 | T-003,T-007 | — | ✅ |
 | [T-013](./T-013-storage-repository.md) | StorageRepository＋migration | 2 | P0 | T-005 | F7,F9 | ✅ |
-| [T-014](./T-014-session-manager.md) | SessionManager＋store | 2 | P0 | T-006〜T-013 | F1〜F6 | 🔲 |
+| [T-014](./T-014-session-manager.md) | SessionManager＋store | 2 | P0 | T-006〜T-013 | F1〜F6 | ✅ |
 | [T-015](./T-015-app-shell.md) | アプリシェル・画面遷移 | 3 | P0 | T-012,T-014 | — | 🔲 |
 | [T-016](./T-016-home-screen.md) | Home画面 | 3 | P0 | T-015 | F3,F9 | 🔲 |
 | [T-017](./T-017-game-screen.md) | Game画面 | 3 | P0 | T-015 | F1,F2,F4,F5 | 🔲 |

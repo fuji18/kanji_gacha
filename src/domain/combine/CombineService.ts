@@ -66,8 +66,8 @@ export class CombineService {
    * @param kanji 漢字 char → 漢字マスタ（画数・頻度・レベル参照用 Map）
    */
   constructor(
-    private readonly dict: Map<CombineKey, CombineEntry>,
-    private readonly kanji: Map<string, KanjiEntry>
+    private readonly dict: ReadonlyMap<CombineKey, CombineEntry>,
+    private readonly kanji: ReadonlyMap<string, KanjiEntry>
   ) {}
 
   /**
