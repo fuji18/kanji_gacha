@@ -157,7 +157,9 @@ describe('SessionManager start / RNG 注入', () => {
     expect(s.gachaRemaining).toBe(GACHA_COUNT);
     expect(s.hand).toEqual([]);
     expect(s.phase).toBe('playing');
-    expect(get(sessionStore)).toBe(s); // store へ publish
+    // store へ publish（Svelte 再描画のため毎回シャローコピーを発行＝別参照・内容は等価）
+    expect(get(sessionStore)).not.toBe(s);
+    expect(get(sessionStore)).toEqual(s);
   });
 
   it('daily は固定日付の dailySeed を注入する', () => {
@@ -473,5 +475,55 @@ describe('SessionManager 既定依存・終了後ガード', () => {
     expect(sm.useHint(s)).toBeNull();
     expect(s.stats.combineSuccess).toBe(1); // 終了後の操作は計上されない
     expect(handBefore).toEqual([]); // ended 時点で手札空
+  });
+});
+
+describe('SessionManager 表示支援（T-017）', () => {
+  it('partView は既知 partId の文字とレアリティを返す', () => {
+    const { sm } = makeSM();
+    sm.start('elementary', 'free');
+    expect(sm.partView('ki')).toEqual({ char: 'ki', rarity: 1 });
+  });
+
+  it('partView は未知 partId に null を返す', () => {
+    const { sm } = makeSM();
+    sm.start('elementary', 'free');
+    expect(sm.partView('unknown')).toBeNull();
+  });
+
+  it('canPullGacha は playing・手札未満・残ありで true、各条件崩れで false', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    expect(sm.canPullGacha(s)).toBe(true);
+
+    s.gachaRemaining = 0;
+    expect(sm.canPullGacha(s)).toBe(false); // 残0
+    s.gachaRemaining = 5;
+
+    s.hand = Array.from({ length: 12 }, (_, i) => ({
+      instanceId: `c${i}`,
+      partId: 'ki',
+    }));
+    expect(sm.canPullGacha(s)).toBe(false); // 手札上限(HAND_CAP=12)
+    s.hand = [];
+
+    s.phase = 'ended';
+    expect(sm.canPullGacha(s)).toBe(false); // 終了後
+  });
+
+  it('canUseHint はレベル別：やさ=常時可、ふつう=残≥1、むず=不可', () => {
+    const { sm } = makeSM();
+    const e = sm.start('elementary', 'free');
+    expect(sm.canUseHint(e)).toBe(true); // コスト0
+    e.gachaRemaining = 0;
+    expect(sm.canUseHint(e)).toBe(true); // やさは無料
+
+    const j = sm.start('juniorhigh', 'free');
+    expect(sm.canUseHint(j)).toBe(true); // 残あり
+    j.gachaRemaining = 0;
+    expect(sm.canUseHint(j)).toBe(false); // 残不足（コスト1）
+
+    const v = sm.start('joyo', 'free');
+    expect(sm.canUseHint(v)).toBe(false); // 利用不可
   });
 });

@@ -20,7 +20,7 @@
   {#if $routeStore === 'home'}
     <HomeScreen {sessionManager} />
   {:else if $routeStore === 'game'}
-    <GameScreen />
+    <GameScreen {sessionManager} />
   {:else if $routeStore === 'result'}
     <ResultScreen />
   {:else if $routeStore === 'zukan'}
