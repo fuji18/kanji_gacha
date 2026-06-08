@@ -18,14 +18,10 @@ test('起動するとホーム画面が表示される', async ({ page }) => {
 test('Home から各画面へ遷移し、戻れる', async ({ page }) => {
   await page.goto('/');
 
-  // Home → Game → Result → もう一回(Game) → Home
+  // Home → Game →（やめる）→ Home
   await page.getByRole('button', { name: 'やさしいでゲーム開始' }).click();
-  await expect(page.getByRole('heading', { name: 'ゲーム' })).toBeVisible();
-  await page.getByRole('button', { name: '終了（結果へ）' }).click();
-  await expect(page.getByRole('heading', { name: '結果' })).toBeVisible();
-  await page.getByRole('button', { name: 'もう一回' }).click();
-  await expect(page.getByRole('heading', { name: 'ゲーム' })).toBeVisible();
-  await page.getByRole('button', { name: 'ホーム' }).click();
+  await expect(page.getByRole('button', { name: /ガチャ/ })).toBeVisible();
+  await page.getByRole('button', { name: 'やめる' }).click();
   await expect(
     page.getByRole('heading', { name: 'レベルをえらぶ' })
   ).toBeVisible();

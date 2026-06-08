@@ -10,7 +10,7 @@ import type {
   PlayStats,
   ZukanState,
 } from '../domain/types';
-import { GACHA_COUNT, HAND_CAP } from '../domain/constants';
+import { GACHA_COUNT, HAND_CAP, HINT_COST } from '../domain/constants';
 import { CombineService } from '../domain/combine/CombineService';
 import { GachaService } from '../domain/gacha/GachaService';
 import { ScoreService } from '../domain/score/ScoreService';
@@ -82,6 +82,7 @@ export class SessionManager {
   private nextId: () => string = makeIdFactory();
   private rescue: RescueService | null = null;
   private pool: Part[] = [];
+  private partsById = new Map<string, Part>();
   private persisted: PersistedState;
   private baselineDiscovered = new Set<string>();
   private altChars: string[] = [];
@@ -120,6 +121,34 @@ export class SessionManager {
   }
 
   /**
+   * 手札部品の表示情報（文字・レアリティ）を解決する（UI 用）。UI が `domain`/`data` に直接触れずに
+   * partId から表示を得る唯一の窓口。未知の partId（プール外）は null。
+   */
+  partView(partId: string): { char: string; rarity: number } | null {
+    const part = this.partsById.get(partId);
+    return part ? { char: part.char, rarity: part.rarity } : null;
+  }
+
+  /**
+   * ガチャを引ける状態か（UI のボタン非活性判定用）。`pullGacha` の事前条件と同一規則を共有する
+   * （UI が HAND_CAP 等を持たずに済む）。playing かつ 手札に空き かつ 残回数あり。
+   */
+  canPullGacha(s: GameSession): boolean {
+    return (
+      s.phase === 'playing' && s.hand.length < HAND_CAP && s.gachaRemaining > 0
+    );
+  }
+
+  /**
+   * ヒントを使える状態か（UI のボタン非活性判定用）。むずかしい（`HINT_COST=null`）は利用不可、
+   * ふつうはガチャ残がコスト以上必要（`RescueService.useHint` の事前条件と DRY）。
+   */
+  canUseHint(s: GameSession): boolean {
+    const cost = HINT_COST[s.level];
+    return s.phase === 'playing' && cost !== null && s.gachaRemaining >= cost;
+  }
+
+  /**
    * セッションを開始する。RNG を生成（free=`Math.random` ラッパ／daily=`mulberry32(dailySeed(...))`）し、
    * level 依存の救済サービスと採番器をセッション毎に用意する。
    */
@@ -135,6 +164,8 @@ export class SessionManager {
     this.nextId = makeIdFactory();
     // pool は level 依存。セッション毎に1度引き、pullGacha と救済の補充ガチャで共有する。
     this.pool = this.dict.getPool(level);
+    // 手札の partId → 部品 を引くための索引（UI の表示解決に使う。ui→data 直接アクセスを避ける）。
+    this.partsById = new Map(this.pool.map((p) => [p.id, p]));
     this.rescue = new RescueService(
       this.combineService,
       this.gacha,
@@ -351,9 +382,15 @@ export class SessionManager {
     };
   }
 
-  /** 現在のセッションを store へ反映する。 */
+  /**
+   * 現在のセッションを store へ反映する。**毎回シャローコピーを発行**して top-level 参照を変える：
+   * `GameSession` をその場更新するため、同一参照を set すると Svelte 5 の store→signal 橋渡しが
+   * 参照等価でデデュープし再描画されない。新しい top-level 参照にすることで再描画を発火させる。
+   * （ネストの `score`/`hand`/`stats` は正本とライブ共有＝深いスナップショットではない。表示専用で
+   * 読むため問題ない。コマンドは `getSession()`（正本）に対して実行する。architecture 4）。
+   */
   private publish(): void {
-    this.sessionStore.set(this.session);
+    this.sessionStore.set(this.session === null ? null : { ...this.session });
   }
 }
 

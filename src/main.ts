@@ -4,7 +4,22 @@ import LoadingView from './ui/components/LoadingView.svelte';
 import ErrorView from './ui/components/ErrorView.svelte';
 import { DictionaryRepository } from './data/DictionaryRepository';
 import { StorageRepository } from './data/StorageRepository';
-import { SessionManager } from './app/SessionManager';
+import {
+  SessionManager,
+  type SessionManagerOptions,
+} from './app/SessionManager';
+import { mulberry32 } from './domain/rng/mulberry32';
+
+/**
+ * `?seed=<整数>` が付いていればフリープレイの乱数を決定化する（再現・E2E 用の無害なレバー）。
+ * デイリーは元から日付シードで決定的なため対象外。
+ */
+function sessionOptionsFromUrl(): SessionManagerOptions {
+  const raw = new URLSearchParams(location.search).get('seed');
+  if (raw === null) return {};
+  const seed = Number(raw);
+  return Number.isFinite(seed) ? { random: mulberry32(seed) } : {};
+}
 
 // エントリポイント（T-015）。辞書ロードを待ってから App をマウントする。
 // ロード中はローディング、失敗時は再読み込み導線付きのエラーUIを表示してマウントを中断する（機能設計11）。
@@ -22,7 +37,11 @@ void dict
   .load()
   .then(() => {
     unmount(loading);
-    const sessionManager = new SessionManager(dict, storage);
+    const sessionManager = new SessionManager(
+      dict,
+      storage,
+      sessionOptionsFromUrl()
+    );
     mount(App, { target, props: { sessionManager } });
   })
   .catch((err: unknown) => {
