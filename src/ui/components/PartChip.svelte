@@ -26,11 +26,15 @@
     '#ff9800',
   ];
   const color = $derived(RARITY_COLORS[rarity] ?? RARITY_COLORS[1]);
+  // レアリティ別グロウ（★3以上で強調）。kg-glow-* は effects.css 定義。
+  const glowClass = $derived(rarity >= 3 ? `kg-glow-${rarity}` : '');
 </script>
 
+<!-- kg-capsule-pop：このボタンがマウントされた瞬間（＝ガチャで手札に追加）に1回再生される。
+     keyed each で既存チップは再マウントされないため、選択トグル等では再生しない。 -->
 <button
   type="button"
-  class="chip"
+  class="chip kg-capsule-pop {glowClass}"
   class:selected
   class:hinted
   data-hinted={hinted}
