@@ -12,7 +12,9 @@
 
 ## スコープ（実装する）
 - Home/デイリー入口→`SessionManager.start(level, 'daily')`（`mulberry32(dailySeed(todayYmdJst(Date.now())))`）
-- デイリーのレベルは日替わり固定、対象レベルを画面に明示
+  - ※ T-016 で「今日のお題」入口は実装済み。現状は暫定で `elementary` 固定（`HomeScreen.startDaily`）。
+    本チケットで日替わりレベル決定に置換し、ボタンに対象レベルを併記する。
+- デイリーのレベルは日替わり固定、対象レベルを画面に明示（PRD F8）
 - 今日のお題のベストをローカル保存・更新表示（`dailyBest`）
 - 1日1回基本＋ベスト更新の再挑戦可
 
