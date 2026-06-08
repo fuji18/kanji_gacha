@@ -40,7 +40,7 @@
 | [T-015](./T-015-app-shell.md) | アプリシェル・画面遷移 | 3 | P0 | T-012,T-014 | — | ✅ |
 | [T-016](./T-016-home-screen.md) | Home画面 | 3 | P0 | T-015 | F3,F9 | ✅ |
 | [T-017](./T-017-game-screen.md) | Game画面 | 3 | P0 | T-015 | F1,F2,F4,F5 | ✅ |
-| [T-018](./T-018-effects.md) | 演出（Canvas・CSS） | 3 | P0 | T-017 | F1,F2 | 🔲 |
+| [T-018](./T-018-effects.md) | 演出（Canvas・CSS） | 3 | P0 | T-017 | F1,F2 | ✅ |
 | [T-019](./T-019-result-screen.md) | Result画面 | 3 | P0 | T-015 | F6,F9 | 🔲 |
 | [T-020](./T-020-zukan-screen.md) | Zukan画面 | 3 | P0 | T-013,T-015 | F7 | 🔲 |
 | [T-021](./T-021-about-license.md) | About画面・クレジット | 3 | P0 | T-015 | F10 | 🔲 |

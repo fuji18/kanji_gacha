@@ -1,0 +1,105 @@
+/*
+ * 軽量演出（T-018 / architecture 2.3）。Canvas で描かない部分を CSS で担う。
+ * すべて GPU 合成しやすい transform/opacity 中心。`prefers-reduced-motion: reduce` で無効化する。
+ * グローバルクラスとして GameScreen / PartChip から利用する。
+ */
+
+/* ガチャ出現：チップがマウントされた瞬間に1回だけ再生（カプセルがポンと出る手触り）。 */
+@keyframes kg-capsule-pop {
+  0% {
+    transform: scale(0.2) translateY(-8px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 失敗：赤いシェイク。 */
+@keyframes kg-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+/* スコア/読み・意味の浮上表示。 */
+@keyframes kg-score-float {
+  0% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  15% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-28px);
+    opacity: 0;
+  }
+}
+
+.kg-capsule-pop {
+  animation: kg-capsule-pop 0.32s ease-out;
+}
+
+.kg-shake {
+  animation: kg-shake 0.4s ease-in-out;
+}
+
+.kg-shake-target--miss {
+  outline: 2px solid #e53935;
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
+
+.kg-score-float {
+  animation: kg-score-float 1.1s ease-out forwards;
+}
+
+/* レアリティグロウ（★が高いほど強い）。--rarity-color は PartChip が指定。 */
+.kg-glow-3 {
+  box-shadow: 0 0 4px var(--rarity-color);
+}
+.kg-glow-4 {
+  box-shadow: 0 0 8px var(--rarity-color);
+}
+.kg-glow-5 {
+  box-shadow:
+    0 0 12px var(--rarity-color),
+    0 0 4px var(--rarity-color);
+}
+
+/* モーション軽減：派手なアニメーションは無効化（瞬時表示にする）。 */
+@media (prefers-reduced-motion: reduce) {
+  .kg-capsule-pop,
+  .kg-shake,
+  .kg-score-float {
+    animation: none;
+  }
+  /* 光感度配慮：グロウも抑制する。 */
+  .kg-glow-3,
+  .kg-glow-4,
+  .kg-glow-5 {
+    box-shadow: none;
+  }
+}

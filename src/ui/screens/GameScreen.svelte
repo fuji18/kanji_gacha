@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import type { SessionManager } from '../../app/SessionManager';
   import { sessionStore } from '../../app/stores/sessionStore';
   import { navigate } from '../../app/stores/routeStore';
@@ -6,6 +7,8 @@
   import HandView from '../components/HandView.svelte';
   import GachaButton from '../components/GachaButton.svelte';
   import HintButton from '../components/HintButton.svelte';
+  import { ParticleField } from '../effects/particleField';
+  import '../effects/effects.css';
 
   // Game 画面（T-017 / PRD F1・F2・F4・F5）。ガチャ・合体・救済の操作とゲーム状態表示。
   // SessionManager は App から prop で受け取り、状態は sessionStore 購読で得る（domain/data は触れない）。
@@ -20,6 +23,75 @@
   let selectedIds = $state<string[]>([]);
   let hintedIds = $state<string[]>([]);
   let feedback = $state('');
+
+  // ---- 演出（T-018）。Canvas は独自 rAF ループで描画し、判定をブロックしない ----
+  const reducedMotion =
+    typeof matchMedia !== 'undefined' &&
+    matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let canvasEl = $state<HTMLCanvasElement | null>(null);
+  let fxWidth = $state(0);
+  let fxHeight = $state(0);
+  let field = $state<ParticleField | null>(null);
+  let shaking = $state(false);
+  let shakeTimer: ReturnType<typeof setTimeout> | null = null;
+  let floatInfo = $state<{
+    char: string;
+    reading: string;
+    meaning: string;
+    gained: number;
+    key: number;
+  } | null>(null);
+  let floatSeq = 0;
+
+  onMount(() => {
+    const ctx = canvasEl?.getContext('2d') ?? null;
+    if (ctx) {
+      field = new ParticleField(ctx, { reducedMotion });
+      field.start();
+    }
+  });
+  onDestroy(() => {
+    field?.stop();
+    if (shakeTimer !== null) clearTimeout(shakeTimer);
+  });
+
+  // canvas のピクセルサイズを要素サイズに同期する。
+  $effect(() => {
+    if (canvasEl && field) {
+      canvasEl.width = fxWidth;
+      canvasEl.height = fxHeight;
+      field.resize(fxWidth, fxHeight);
+    }
+  });
+
+  function fireSuccess(
+    awarded: {
+      char: string;
+      readings: string[];
+      meanings: string[];
+    },
+    gained: number
+  ): void {
+    if (fxWidth > 0 && fxHeight > 0) field?.burst(fxWidth / 2, fxHeight / 2);
+    floatSeq += 1;
+    floatInfo = {
+      char: awarded.char,
+      reading: awarded.readings[0] ?? '',
+      meaning: awarded.meanings[0] ?? '',
+      gained,
+      key: floatSeq,
+    };
+    // 表示は次の操作（ガチャ/合体/捨てる）まで残す。クリアは各ハンドラで行う。
+  }
+
+  function fireMiss(): void {
+    shaking = true;
+    if (shakeTimer !== null) clearTimeout(shakeTimer);
+    shakeTimer = setTimeout(() => {
+      shaking = false;
+      shakeTimer = null;
+    }, 450);
+  }
 
   // 手札の表示モデル（partId → 文字/レアリティを SessionManager で解決し、選択/ヒントを付与）
   const handItems = $derived(
@@ -57,6 +129,7 @@
     selectedIds = []; // 手札が変わるので選択もリセット（他コマンドと一貫）
     hintedIds = [];
     feedback = '';
+    floatInfo = null;
   }
 
   function doCombine(): void {
@@ -64,7 +137,14 @@
     if (!s || selectedIds.length < 2) return;
     const sel = s.hand.filter((h) => selectedIds.includes(h.instanceId));
     const result = sessionManager.combine(s, sel);
-    feedback = result.success ? `+${result.gainedScore}！` : 'ミス…';
+    if (result.success && result.resolved) {
+      feedback = `+${result.gainedScore}！`;
+      fireSuccess(result.resolved.awarded, result.gainedScore);
+    } else {
+      feedback = '✕ ミス…';
+      floatInfo = null;
+      fireMiss();
+    }
     selectedIds = [];
     hintedIds = [];
   }
@@ -89,6 +169,7 @@
     selectedIds = [];
     hintedIds = [];
     feedback = '';
+    floatInfo = null;
   }
 
   function quit(): void {
@@ -101,7 +182,7 @@
   });
 </script>
 
-<section class="screen game">
+<section class="screen game" class:kg-shake={shaking}>
   <h2 class="sr-only">ゲーム</h2>
 
   {#if view === null}
@@ -117,7 +198,29 @@
 
     <p class="feedback" role="status" data-testid="feedback">{feedback}</p>
 
-    <HandView items={handItems} onToggle={toggle} />
+    <div
+      class="fx-wrap"
+      bind:clientWidth={fxWidth}
+      bind:clientHeight={fxHeight}
+    >
+      <canvas class="fx-layer" bind:this={canvasEl} aria-hidden="true"></canvas>
+      <HandView items={handItems} onToggle={toggle} />
+
+      {#if floatInfo}
+        {#key floatInfo.key}
+          <div class="kg-score-float score-float" data-testid="score-float">
+            <span class="sf-char">{floatInfo.char}</span>
+            {#if floatInfo.reading}<span class="sf-yomi"
+                >{floatInfo.reading}</span
+              >{/if}
+            {#if floatInfo.meaning}<span class="sf-mean"
+                >{floatInfo.meaning}</span
+              >{/if}
+            <span class="sf-score">+{floatInfo.gained}</span>
+          </div>
+        {/key}
+      {/if}
+    </div>
 
     {#if handFull}
       <p class="organize" role="status">
@@ -167,6 +270,50 @@
   .feedback {
     min-height: 1.4rem;
     margin: 0 0 0.5rem;
+    font-weight: 700;
+    color: #2a6;
+  }
+  .fx-wrap {
+    position: relative;
+  }
+  /* 合体成功の Canvas 演出。手札域に重ね、操作を妨げない。 */
+  .fx-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+  }
+  /* スコア/読み・意味の浮上表示（DOM・アクセシビリティ確保）。 */
+  .score-float {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    pointer-events: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: baseline;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.5rem;
+  }
+  .sf-char {
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+  .sf-yomi {
+    color: #555;
+  }
+  .sf-mean {
+    color: #555;
+    font-size: 0.85rem;
+  }
+  .sf-score {
     font-weight: 700;
     color: #2a6;
   }
