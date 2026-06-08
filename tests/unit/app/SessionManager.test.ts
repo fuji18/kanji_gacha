@@ -523,7 +523,7 @@ describe('SessionManager 既定依存・終了後ガード', () => {
   });
 });
 
-describe('SessionManager 表示支援（T-017）', () => {
+describe('SessionManager 表示支援（T-017 / T-020）', () => {
   it('partView は既知 partId の文字とレアリティを返す', () => {
     const { sm } = makeSM();
     sm.start('elementary', 'free');
@@ -534,6 +534,21 @@ describe('SessionManager 表示支援（T-017）', () => {
     const { sm } = makeSM();
     sm.start('elementary', 'free');
     expect(sm.partView('unknown')).toBeNull();
+  });
+
+  it('kanjiView は既知 char の読み/意味を返し、未知は null（図鑑用・T-020）', () => {
+    const { sm } = makeSM();
+    expect(sm.kanjiView('林')).toEqual({
+      char: '林',
+      readings: [],
+      meanings: [],
+    });
+    expect(sm.kanjiView('存在しない')).toBeNull();
+  });
+
+  it('reachableTotal は joyo の到達可能 N を返す（図鑑の分母・T-020）', () => {
+    const { sm } = makeSM();
+    expect(sm.reachableTotal()).toBe(REACHABLE.reachableN.joyo);
   });
 
   it('canPullGacha は playing・手札未満・残ありで true、各条件崩れで false', () => {

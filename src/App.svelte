@@ -24,7 +24,7 @@
   {:else if $routeStore === 'result'}
     <ResultScreen {sessionManager} />
   {:else if $routeStore === 'zukan'}
-    <ZukanScreen />
+    <ZukanScreen {sessionManager} />
   {:else if $routeStore === 'about'}
     <AboutScreen />
   {:else}
