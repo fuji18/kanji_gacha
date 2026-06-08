@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { setContext } from 'svelte';
   import type { SessionManager } from './app/SessionManager';
   import { routeStore } from './app/stores/routeStore';
   import HomeScreen from './ui/screens/HomeScreen.svelte';
@@ -9,12 +8,8 @@
   import AboutScreen from './ui/screens/AboutScreen.svelte';
 
   // ルートコンポーネント（T-015）。`routeStore` を購読して現在画面をレンダリングする。
-  // 進行中の SessionManager は context で子画面（T-016 以降）へ渡す。
+  // SessionManager は必要な画面へ prop で渡す（T-016: Home。Game/Result は各担当チケットで追加）。
   let { sessionManager }: { sessionManager: SessionManager } = $props();
-  // sessionManager はマウント時に一度だけ渡される単一インスタンス（差し替えない）。
-  // 初期値の捕捉が意図どおりのため state_referenced_locally 警告を抑制する。
-  // svelte-ignore state_referenced_locally
-  setContext('sessionManager', sessionManager);
 </script>
 
 <header class="app-header">
@@ -23,7 +18,7 @@
 
 <main id="main">
   {#if $routeStore === 'home'}
-    <HomeScreen />
+    <HomeScreen {sessionManager} />
   {:else if $routeStore === 'game'}
     <GameScreen />
   {:else if $routeStore === 'result'}
@@ -34,7 +29,7 @@
     <AboutScreen />
   {:else}
     <!-- Screen 型を網羅済みのため未到達。型に画面を追加したら明示分岐を足すこと。 -->
-    <HomeScreen />
+    <HomeScreen {sessionManager} />
   {/if}
 </main>
 
