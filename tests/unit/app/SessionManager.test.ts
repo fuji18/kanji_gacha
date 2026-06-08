@@ -357,6 +357,51 @@ describe('SessionManager 救済（KPI 記録）', () => {
   });
 });
 
+describe('SessionManager end / isNewBest（新記録判定・T-019）', () => {
+  it('初プレイでスコア>0なら新記録（isNewBest=true）', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    const { sm } = makeSM(storage);
+    const s = sm.start('elementary', 'free');
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林（score 8）
+    const r = sm.end(s, 'stuck');
+    expect(r.isNewBest).toBe(true);
+  });
+
+  it('既存ベスト未満なら非新記録（isNewBest=false）', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    // 1回目で 8 点のベストを作る
+    const a = makeSM(storage);
+    const s1 = a.sm.start('elementary', 'free');
+    setHand(s1, ['ki', 'ki']);
+    a.sm.combine(s1, [...s1.hand]);
+    a.sm.end(s1, 'stuck');
+    // 2回目はスコア 0（合体せず終了）→ ベスト 8 未満
+    const b = makeSM(storage);
+    const s2 = b.sm.start('elementary', 'free');
+    const r2 = b.sm.end(s2, 'empty_hand');
+    expect(r2.score).toBe(0);
+    expect(r2.isNewBest).toBe(false);
+  });
+
+  it('既存ベストと同点なら新記録としない（score > best の厳密比較）', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    const a = makeSM(storage);
+    const s1 = a.sm.start('elementary', 'free');
+    setHand(s1, ['ki', 'ki']);
+    a.sm.combine(s1, [...s1.hand]);
+    a.sm.end(s1, 'stuck'); // best = 8
+    // 2回目も同じ 8 点 → 同点は更新しない
+    const b = makeSM(storage);
+    const s2 = b.sm.start('elementary', 'free');
+    setHand(s2, ['ki', 'ki']);
+    b.sm.combine(s2, [...s2.hand]);
+    const r2 = b.sm.end(s2, 'stuck');
+    expect(r2.score).toBe(8);
+    expect(r2.isNewBest).toBe(false);
+  });
+});
+
 describe('SessionManager end / 永続化', () => {
   it('end は冪等：再呼び出しで同一結果・二重永続化しない', () => {
     const { sm } = makeSM();

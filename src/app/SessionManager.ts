@@ -338,6 +338,10 @@ export class SessionManager {
     s.stats.finalScore = s.score.score;
     s.stats.durationMs = this.now() - this.startedAtMs;
 
+    // 新記録判定は永続化の前に行う（persistResults が best を更新し this.persisted を読み直すため）。
+    // daily も現状はレベルベストで比較する（T-022 で dailyBest 比較への置換を検討）。
+    const isNewBest = s.score.score > this.persisted.bestScores[s.level];
+
     this.persistResults(s);
 
     const result: GameResult = {
@@ -349,6 +353,7 @@ export class SessionManager {
       newlyDiscovered: [...s.newlyDiscovered],
       reason,
       durationMs: s.stats.durationMs,
+      isNewBest,
     };
     this.result = result;
     this.publish();

@@ -119,6 +119,7 @@ export interface GameResult {
   newlyDiscovered: string[]; // 今回新規に図鑑追加された漢字
   reason: 'stuck' | 'empty_hand'; // 終了理由（KPI と一致）
   durationMs: number; // 所要時間
+  isNewBest: boolean; // 今回スコアがレベル別ベストを更新したか（新記録明示・PRD F9）
 }
 
 // ===== 永続データ（localStorage・機能設計3.3） =====
