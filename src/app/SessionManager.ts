@@ -130,6 +130,27 @@ export class SessionManager {
   }
 
   /**
+   * 漢字の表示情報（読み・意味）を解決する（図鑑 UI 用・T-020）。UI が `data` に直接触れずに
+   * char から読み/意味を得る窓口。辞書に無い char は null（getKanji と異なり throw しない）。
+   */
+  kanjiView(
+    char: string
+  ): { char: string; readings: string[]; meanings: string[] } | null {
+    const entry = this.dict.kanjiEntries.get(char);
+    return entry
+      ? { char: entry.char, readings: entry.readings, meanings: entry.meanings }
+      : null;
+  }
+
+  /**
+   * 図鑑の収集率の分母 N（到達可能 primary 漢字の総数・機能設計8.1）。joyo scope は
+   * elementary⊆juniorhigh⊆joyo を内包する最大集合なので、全体の到達可能総数として使う。
+   */
+  reachableTotal(): number {
+    return this.dict.getReachableN('joyo');
+  }
+
+  /**
    * ガチャを引ける状態か（UI のボタン非活性判定用）。`pullGacha` の事前条件と同一規則を共有する
    * （UI が HAND_CAP 等を持たずに済む）。playing かつ 手札に空き かつ 残回数あり。
    */
