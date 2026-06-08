@@ -43,7 +43,7 @@
 | [T-018](./T-018-effects.md) | 演出（Canvas・CSS） | 3 | P0 | T-017 | F1,F2 | ✅ |
 | [T-019](./T-019-result-screen.md) | Result画面 | 3 | P0 | T-015 | F6,F9 | ✅ |
 | [T-020](./T-020-zukan-screen.md) | Zukan画面 | 3 | P0 | T-013,T-015 | F7 | ✅ |
-| [T-021](./T-021-about-license.md) | About画面・クレジット | 3 | P0 | T-015 | F10 | 🔲 |
+| [T-021](./T-021-about-license.md) | About画面・クレジット | 3 | P0 | T-015 | F10 | ✅ |
 | [T-022](./T-022-seeded-daily.md) | シードデイリー統合 | 4 | P0 | T-014,T-016 | F8 | 🔲 |
 | [T-023](./T-023-result-share.md) | 結果シェア | 4 | P1 | T-019 | F11 | 🔲 |
 | [T-024](./T-024-pwa-offline.md) | 最小SW・PWA（オフライン保証） | 5 | P0 | T-015 | — | 🔲 |
