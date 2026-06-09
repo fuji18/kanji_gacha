@@ -1,10 +1,20 @@
 <script lang="ts">
   import type { SessionManager } from '../../app/SessionManager';
   import { navigate } from '../../app/stores/routeStore';
+  import { buildShareText } from '../share/shareText';
+  import { shareOrCopy } from '../share/share';
 
   // Result 画面（T-019 / PRD F6・F9）。プレイ結果の表示とリトライ・共有・ホーム導線。
   // 結果は SessionManager.getResult() から取得（型推論で domain/data を直接 import しない）。
   let { sessionManager }: { sessionManager: SessionManager } = $props();
+
+  // レベル表示名（HomeScreen の LEVELS と対応）。result.level は domain の Level 値だが
+  // ui→domain 直接依存を避けるため表示名はこのマップで解決する（T-023・F11）。
+  const LEVEL_LABELS: Record<string, string> = {
+    elementary: 'やさしい',
+    juniorhigh: 'ふつう',
+    joyo: 'むずかしい',
+  };
 
   // 結果はこの画面に来た時点で確定済み（end() 済み）。マウント時に1度だけ取得する。
   // svelte-ignore state_referenced_locally
@@ -19,6 +29,7 @@
   })();
 
   let shareNote = $state('');
+  let sharing = $state(false);
 
   function retry(): void {
     if (!result) return;
@@ -26,9 +37,22 @@
     navigate('game');
   }
 
-  function share(): void {
-    // 入口のみ。送信処理は T-023（結果シェア）で実装する。
-    shareNote = 'シェアは準備中です（T-023）。';
+  // 結果シェア（T-023 / PRD F11）。レベル・スコア・作成漢字から定型文を生成し、Web Share API で
+  // 共有シートを開く。非対応端末はクリップボードコピーにフォールバックし、結果をメッセージ表示する。
+  async function share(): Promise<void> {
+    if (!result || sharing) return;
+    sharing = true;
+    shareNote = '';
+    const text = buildShareText({
+      levelLabel: LEVEL_LABELS[result.level] ?? result.level,
+      score: result.score,
+      createdKanji: result.createdKanji,
+    });
+    const outcome = await shareOrCopy(text);
+    if (outcome === 'copied') shareNote = 'クリップボードにコピーしました。';
+    else if (outcome === 'failed') shareNote = 'シェアできませんでした。';
+    // shared / cancelled は OS の共有シート側で完結するためメッセージは出さない。
+    sharing = false;
   }
 
   function home(): void {
@@ -88,7 +112,7 @@
 
     <nav class="actions">
       <button type="button" onclick={retry}>もう一回</button>
-      <button type="button" onclick={share}>シェア</button>
+      <button type="button" onclick={share} disabled={sharing}>シェア</button>
       <button type="button" onclick={home}>ホーム</button>
     </nav>
   {/if}
