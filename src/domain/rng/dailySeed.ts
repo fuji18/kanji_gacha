@@ -5,8 +5,13 @@
  * ドメイン純粋性のため `Date.now()` は呼ばず、現在時刻 `nowMs` は引数で注入する。
  */
 
+import type { Level } from '../types';
+
 /** JST のオフセット（UTC+9）をミリ秒で表したもの。 */
 const JST_OFFSET_MS = 9 * 3600 * 1000;
+
+/** 日替わりレベルの巡回順（包含順・易→難）。 */
+const DAILY_LEVELS: Level[] = ['elementary', 'juniorhigh', 'joyo'];
 
 /**
  * 現在時刻（epoch ミリ秒）を JST 基準の YYYYMMDD 文字列に変換する。
@@ -33,4 +38,15 @@ export function todayYmdJst(nowMs: number): string {
  */
 export function dailySeed(dateYmd: string): number {
   return parseInt(dateYmd, 10);
+}
+
+/**
+ * 日付シードから「今日のお題」の対象レベルを決める（機能設計4.6・F8・暫定 `seed % 3`）。
+ * 日付が変われば（JST 0:00 基準で seed が変わり）レベルも巡回する。全プレイヤー同一日付＝同一レベル。
+ *
+ * @param seed `dailySeed(...)` の整数シード
+ * @returns その日の対象レベル
+ */
+export function dailyLevel(seed: number): Level {
+  return DAILY_LEVELS[seed % DAILY_LEVELS.length];
 }

@@ -17,7 +17,7 @@ import { ScoreService } from '../domain/score/ScoreService';
 import { RescueService } from '../domain/rescue/RescueService';
 import { resolveRank } from '../domain/rank/resolveRank';
 import { mulberry32 } from '../domain/rng/mulberry32';
-import { dailySeed, todayYmdJst } from '../domain/rng/dailySeed';
+import { dailyLevel, dailySeed, todayYmdJst } from '../domain/rng/dailySeed';
 import type { Rng } from '../domain/rng/Rng';
 import type { DictionaryRepository } from '../data/DictionaryRepository';
 import type { StorageRepository } from '../data/StorageRepository';
@@ -148,6 +148,15 @@ export class SessionManager {
    */
   reachableTotal(): number {
     return this.dict.getReachableN('joyo');
+  }
+
+  /**
+   * 「今日のお題」の対象レベルと日付キー（機能設計4.6・F8・T-022）。`now`（注入時刻）から JST 日付を求め、
+   * 日替わり固定のレベルを決める。Home が表示（レベル併記・デイリーベスト）と `start(level,'daily')` に使う。
+   */
+  dailyInfo(): { level: Level; ymd: string } {
+    const ymd = todayYmdJst(this.now());
+    return { level: dailyLevel(dailySeed(ymd)), ymd };
   }
 
   /**
@@ -360,8 +369,12 @@ export class SessionManager {
     s.stats.durationMs = this.now() - this.startedAtMs;
 
     // 新記録判定は永続化の前に行う（persistResults が best を更新し this.persisted を読み直すため）。
-    // daily も現状はレベルベストで比較する（T-022 で dailyBest 比較への置換を検討）。
-    const isNewBest = s.score.score > this.persisted.bestScores[s.level];
+    // daily はその日のデイリーベスト、free はレベルベストと比較する（T-022）。
+    const prevBest =
+      s.mode === 'daily'
+        ? (this.persisted.dailyBest[todayYmdJst(this.now())] ?? 0)
+        : this.persisted.bestScores[s.level];
+    const isNewBest = s.score.score > prevBest;
 
     this.persistResults(s);
 

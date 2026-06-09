@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { todayYmdJst, dailySeed } from '../../../../src/domain/rng/dailySeed';
+import {
+  todayYmdJst,
+  dailySeed,
+  dailyLevel,
+} from '../../../../src/domain/rng/dailySeed';
+import type { Level } from '../../../../src/domain/types';
 
 // todayYmdJst は JST+9 固定・locale非依存（機能設計4.6・問題5）。
 // 日付の切り替わりは JST 0:00 = UTC 前日15:00。境界を固定する。
@@ -41,5 +46,29 @@ describe('dailySeed', () => {
   it('todayYmdJst と合成して数値シードを得る', () => {
     const nowMs = Date.UTC(2026, 5, 3, 3, 0, 0);
     expect(dailySeed(todayYmdJst(nowMs))).toBe(20260603);
+  });
+});
+
+describe('dailyLevel（日替わりレベル・T-022/F8）', () => {
+  it('seed % 3 で 3レベルを巡回し、必ず有効なレベルを返す', () => {
+    const levels: Level[] = ['elementary', 'juniorhigh', 'joyo'];
+    // seed % 3 のインデックスでレベルが決まる
+    expect(dailyLevel(20260603)).toBe(levels[20260603 % 3]);
+    // 3連続シードは3レベルすべてを1回ずつ網羅する
+    const trio = [
+      dailyLevel(20260603),
+      dailyLevel(20260604),
+      dailyLevel(20260605),
+    ];
+    expect(new Set(trio)).toEqual(new Set(levels));
+    // 連続する日付で常に有効レベル＆3日周期
+    for (let s = 20260601; s <= 20260630; s++) {
+      expect(levels).toContain(dailyLevel(s));
+      expect(dailyLevel(s)).toBe(dailyLevel(s + 3));
+    }
+  });
+
+  it('同一シードは常に同一レベル（決定性）', () => {
+    expect(dailyLevel(20260603)).toBe(dailyLevel(20260603));
   });
 });
