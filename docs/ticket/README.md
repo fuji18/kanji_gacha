@@ -45,7 +45,7 @@
 | [T-020](./T-020-zukan-screen.md) | Zukan画面 | 3 | P0 | T-013,T-015 | F7 | ✅ |
 | [T-021](./T-021-about-license.md) | About画面・クレジット | 3 | P0 | T-015 | F10 | ✅ |
 | [T-022](./T-022-seeded-daily.md) | シードデイリー統合 | 4 | P0 | T-014,T-016 | F8 | 🔲 |
-| [T-023](./T-023-result-share.md) | 結果シェア | 4 | P1 | T-019 | F11 | 🔲 |
+| [T-023](./T-023-result-share.md) | 結果シェア | 4 | P1 | T-019 | F11 | ✅ |
 | [T-024](./T-024-pwa-offline.md) | 最小SW・PWA（オフライン保証） | 5 | P0 | T-015 | — | 🔲 |
 | [T-025](./T-025-e2e-quality-gate.md) | E2E・品質ゲート仕上げ | 5 | P0 | T-014〜T-022 | — | 🔲 |
 | [T-026](./T-026-deploy.md) | 静的デプロイ・CSP | 5 | P0 | T-024 | — | 🔲 |

@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 
 // T-019 Result画面の E2E（受け入れ条件）。
 //  - 終了（詰み/手札0）で結果が表示される（スコア・作成漢字・新発見・称号・新記録）
-//  - もう一回/ホームが遷移、シェア入口が存在する
+//  - もう一回/ホームが遷移、シェア（T-023：Web Share / クリップボードフォールバック）が機能する
 // 決定性は `?seed=` で確保し、終了までヒント合体を繰り返す。
 
 const SEED = 12345;
@@ -74,12 +74,67 @@ test('結果からホームへ戻れる', async ({ page }) => {
   ).toBeVisible();
 });
 
-test('シェア入口が存在する（実体は T-023）', async ({ page }) => {
+// シェア文面の書式（T-023 / F11）。レベルは startSeeded＝やさしい固定。
+const SHARE_TEXT_RE =
+  /^漢字合体ガチャ｜やさしい｜スコア\d+｜作った字：.+ #漢字合体ガチャ$/;
+
+test('Web Share API 対応端末では共有シートが出る（T-023 / F11）', async ({
+  page,
+}) => {
+  // navigator.share を注入し、呼び出しと受領文面を捕捉する。
+  await page.addInitScript(() => {
+    const w = window as unknown as { __shared: string[] };
+    w.__shared = [];
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: (data: { text?: string }) => {
+        w.__shared.push(data.text ?? '');
+        return Promise.resolve();
+      },
+    });
+  });
   await startSeeded(page);
   await playToResult(page);
 
-  const share = page.getByRole('button', { name: 'シェア' });
-  await expect(share).toBeVisible();
-  await share.click();
-  await expect(page.getByText('シェアは準備中です（T-023）。')).toBeVisible();
+  await page.getByRole('button', { name: 'シェア' }).click();
+  const shared = await page.evaluate(
+    () => (window as unknown as { __shared: string[] }).__shared
+  );
+  expect(shared).toHaveLength(1);
+  expect(shared[0]).toMatch(SHARE_TEXT_RE);
+});
+
+test('Web Share 非対応ではクリップボードコピーにフォールバックする（T-023）', async ({
+  page,
+}) => {
+  // share を無効化し、clipboard.writeText で受領文面を捕捉（ヘッドレスの権限差異を回避）。
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: undefined,
+    });
+    const w = window as unknown as { __copied: string[] };
+    w.__copied = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (t: string) => {
+          w.__copied.push(t);
+          return Promise.resolve();
+        },
+      },
+    });
+  });
+  await startSeeded(page);
+  await playToResult(page);
+
+  await page.getByRole('button', { name: 'シェア' }).click();
+  await expect(
+    page.getByText('クリップボードにコピーしました。')
+  ).toBeVisible();
+  const copied = await page.evaluate(
+    () => (window as unknown as { __copied: string[] }).__copied
+  );
+  expect(copied).toHaveLength(1);
+  expect(copied[0]).toMatch(SHARE_TEXT_RE);
 });
