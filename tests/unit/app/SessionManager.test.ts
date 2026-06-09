@@ -12,7 +12,11 @@ import {
   StorageRepository,
   type StorageLike,
 } from '../../../src/data/StorageRepository';
-import { dailySeed, todayYmdJst } from '../../../src/domain/rng/dailySeed';
+import {
+  dailySeed,
+  todayYmdJst,
+  dailyLevel,
+} from '../../../src/domain/rng/dailySeed';
 import { GACHA_COUNT } from '../../../src/domain/constants';
 import type {
   CombineEntry,
@@ -354,6 +358,40 @@ describe('SessionManager 救済（KPI 記録）', () => {
     sm.discardAndDraw(s, 'nope');
     expect(s.stats.discardUsed).toBe(0);
     expect(s.hand).toHaveLength(2);
+  });
+});
+
+describe('SessionManager dailyInfo（日替わり・T-022）', () => {
+  it('注入時刻の JST 日付から日替わりレベルと ymd を返す（決定的）', () => {
+    const now = () => 1_780_000_000_000;
+    const { sm } = makeSM(undefined, { now });
+    const info = sm.dailyInfo();
+    const ymd = todayYmdJst(now());
+    expect(info.ymd).toBe(ymd);
+    expect(info.level).toBe(dailyLevel(dailySeed(ymd)));
+    // 別インスタンスでも同一時刻なら同一（全プレイヤー再現性）
+    const { sm: sm2 } = makeSM(undefined, { now });
+    expect(sm2.dailyInfo()).toEqual(info);
+  });
+});
+
+describe('SessionManager end / isNewBest（daily は dailyBest 比較・T-022）', () => {
+  it('daily の新記録はその日のデイリーベストと比較する', () => {
+    const now = () => 1_780_000_000_000;
+    const storage = new StorageRepository(new MemoryStorage());
+    // 1回目の daily：8点 → デイリーベスト更新（新記録）
+    const a = makeSM(storage, { now });
+    const lv = a.sm.dailyInfo().level;
+    const s1 = a.sm.start(lv, 'daily');
+    setHand(s1, ['ki', 'ki']);
+    a.sm.combine(s1, [...s1.hand]);
+    expect(a.sm.end(s1, 'stuck').isNewBest).toBe(true);
+    // 2回目の daily（同日）：0点 → デイリーベスト8未満で非新記録
+    const b = makeSM(storage, { now });
+    const s2 = b.sm.start(b.sm.dailyInfo().level, 'daily');
+    const r2 = b.sm.end(s2, 'empty_hand');
+    expect(r2.score).toBe(0);
+    expect(r2.isNewBest).toBe(false);
   });
 });
 

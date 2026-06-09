@@ -23,10 +23,16 @@
     navigate('game');
   }
 
-  // 今日のお題（daily）。暫定で elementary を渡す。
-  // TODO(T-022): 日替わりレベルの決定・シード統合と、対象レベルのボタン併記（PRD F8）。
+  // 今日のお題（daily・T-022）。日付から日替わり固定レベルを決め、ボタンに併記して開始する（PRD F8）。
+  // svelte-ignore state_referenced_locally
+  const daily = sessionManager.dailyInfo();
+  const dailyLabel =
+    LEVELS.find((l) => l.id === daily.level)?.label ?? daily.level;
+  // 今日のデイリーベスト（永続反映・リアクティブ）。
+  const dailyBest = $derived($persistedStore.dailyBest[daily.ymd] ?? 0);
+
   function startDaily(): void {
-    sessionManager.start('elementary', 'daily');
+    sessionManager.start(daily.level, 'daily');
     navigate('game');
   }
 </script>
@@ -53,7 +59,16 @@
     {/each}
   </ul>
 
-  <button type="button" class="daily" onclick={startDaily}>今日のお題</button>
+  <button
+    type="button"
+    class="daily"
+    onclick={startDaily}
+    aria-label={`今日のお題（${dailyLabel}）でゲーム開始`}
+  >
+    <span class="daily-title">今日のお題</span>
+    <span class="daily-level">{dailyLabel}</span>
+    <span class="daily-best">ベスト {dailyBest}</span>
+  </button>
 
   <nav class="actions">
     <button type="button" onclick={() => navigate('zukan')}>図鑑</button>
@@ -99,5 +114,22 @@
     padding: 0.8rem 1.1rem;
     font-size: 1rem;
     cursor: pointer;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: left;
+  }
+  .daily-title {
+    font-weight: 700;
+  }
+  .daily-level {
+    font-size: 0.85rem;
+    color: #555;
+  }
+  .daily-best {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: #333;
   }
 </style>

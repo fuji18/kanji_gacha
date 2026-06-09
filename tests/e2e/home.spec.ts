@@ -20,13 +20,16 @@ test('3レベルそれぞれ1タップでゲーム開始できる', async ({ pag
 
 test('レベル別ベストスコアを表示する', async ({ page }) => {
   await page.goto('/');
-  // 初期状態（localStorage 空）は各レベル ベスト 0
-  await expect(page.getByText('ベスト 0')).toHaveCount(LEVELS.length);
+  // 初期状態（localStorage 空）は各レベルのベストが 0（.level-best はレベルカード分）
+  await expect(page.locator('.level-best')).toHaveCount(LEVELS.length);
+  for (let i = 0; i < LEVELS.length; i++) {
+    await expect(page.locator('.level-best').nth(i)).toHaveText('ベスト 0');
+  }
 });
 
 test('今日のお題からゲームへ遷移できる', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: '今日のお題' }).click();
+  await page.getByRole('button', { name: /今日のお題/ }).click();
   await expect(page.getByRole('heading', { name: 'ゲーム' })).toBeVisible();
 });
 
