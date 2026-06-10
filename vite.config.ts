@@ -5,6 +5,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 // 静的Webアプリ（SSR無し）。vite-plugin-pwa で最小SWを有効化し、初回ロード後の完全オフライン動作を
 // 保証する（architecture 1.3/9.1・PRD非機能・T-024）。ホーム追加/インストール等の体験強化は後続フェーズ。
 export default defineConfig({
+  // 本番デプロイ時のみサブパスを適用する（GitHub Pages のプロジェクトページ = /kanji_gacha/）。
+  // dev/preview/E2E は DEPLOY_BASE 未設定なので '/' のまま（既存E2Eに影響なし・T-026）。
+  // import.meta.env.BASE_URL に反映され、DictionaryRepository の `${baseUrl}data/...` 連結が
+  // サブパス配信でも正しく解決する（T-012 で末尾 '/' 正規化済み）。
+  base: process.env.DEPLOY_BASE || '/',
   plugins: [
     svelte(),
     VitePWA({

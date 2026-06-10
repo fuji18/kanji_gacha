@@ -130,9 +130,13 @@ graph LR
 |---|---|
 | 配信形態 | 完全静的（SSR無し）。`vite build` の出力をそのまま配信 |
 | ホスティング候補 | Cloudflare Pages / GitHub Pages / Netlify（いずれも**無料枠**・CDN付き） |
+| **Phase1 採用先** | **GitHub Pages**（`GITHUB_TOKEN`/OIDC のみで完結＝外部シークレット不要・運用費0円）。公開URL `https://fuji18.github.io/kanji_gacha/`（T-026） |
 | サーバー | **0台**。運用費0円（制約4） |
-| CI/CD | push契機でビルド＋データ生成＋テスト＋デプロイ |
-| 独自ドメイン | 任意（無料枠でも可） |
+| CI/CD | push契機でビルド＋データ生成＋テスト＋デプロイ。`ci.yml`（品質ゲート）と `deploy.yml`（`main` push でGitHub Pagesへ配信）に分離 |
+| サブパス対応 | プロジェクトページは `/kanji_gacha/` 配信。デプロイ時のみ `DEPLOY_BASE=/kanji_gacha/` で `base` を切替（dev/E2Eは `/`）。`import.meta.env.BASE_URL` 経由で辞書取得が解決（T-012/T-026） |
+| 独自ドメイン | 任意（無料枠でも可。apex化すれば `base='/'` に戻せる） |
+
+> **CSP の適用方式（T-026）**：GitHub Pages は `_headers` を解釈しないため、CSP `default-src 'self'` は `index.html` の `<meta http-equiv>` で適用し全配信先で有効にする。`_headers` も併置し、Cloudflare Pages / Netlify へ移行した場合のヘッダ管理を可搬に保つ（6.2）。
 
 ---
 

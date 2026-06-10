@@ -1,0 +1,20 @@
+# 配信ヘッダ（Cloudflare Pages / Netlify 互換）。
+# GitHub Pages はこのファイルを解釈しないため、CSP は index.html の <meta> でも適用している（T-026）。
+# Cloudflare/Netlify へ移行した場合はこのファイルがそのまま有効になる（repository-structure 214 の環境別管理）。
+# Phase1 は最厳格（default-src 'self'）。Phase2 のランキングBE導入時に connect-src を段階開放する。
+#
+# 【既知の制約】GitHub Pages 配信では meta で表現できない frame-ancestors / X-Content-Type-Options /
+# Referrer-Policy は適用されない（個人開発MVPとして許容。Cloudflare/Netlify 移行時に自動で有効化される）。
+
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+
+# content-hash 付きアセットは不変。長期キャッシュで再取得を抑止する。
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service Worker は常に最新を取得させる（辞書/アプリ更新の確実な反映）。
+/sw.js
+  Cache-Control: no-cache

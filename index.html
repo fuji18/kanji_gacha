@@ -2,6 +2,16 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      CSP（Phase1 最厳格・architecture 6.2 / T-026）。GitHub Pages は _headers を解釈しないため
+      meta で適用し全配信先で有効にする。本番ビルドHTMLはインラインJS/CSSを含まず（エントリJS・
+      registerSW.js は外部src、CSSも外部href）、辞書JSON/SW/manifest は同一オリジンのため 'self' で成立。
+      Phase2 のランキングBE導入時は connect-src を段階開放する（_headers と合わせて更新）。
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'self'; object-src 'none'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>漢字合体ガチャ</title>
   </head>
