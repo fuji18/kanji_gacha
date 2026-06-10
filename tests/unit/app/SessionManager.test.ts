@@ -625,3 +625,39 @@ describe('SessionManager 表示支援（T-017 / T-020）', () => {
     expect(sm.canUseHint(v)).toBe(false); // 利用不可
   });
 });
+
+describe('SessionManager KPI 計測ログ（1プレイ統合・T-025）', () => {
+  it('代表フロー（ガチャ→成功→ミス→ヒント→終了）で PlayStats 主要KPIが記録される', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+
+    // ガチャ（プレイ進行：残が1減る）
+    sm.pullGacha(s);
+    expect(s.gachaRemaining).toBe(GACHA_COUNT - 1);
+
+    // 合体成功（ki+ki → 林・新規発見）
+    setHand(s, ['ki', 'ki']);
+    expect(sm.combine(s, [...s.hand]).success).toBe(true);
+
+    // 合体ミス（辞書に無い組）
+    setHand(s, ['ki', 'kuchi']);
+    expect(sm.combine(s, [...s.hand]).success).toBe(false);
+
+    // ヒント（elementary は無料で1組返す）
+    setHand(s, ['ki', 'ki', 'kuchi']);
+    expect(sm.useHint(s)).not.toBeNull();
+
+    // 終了 → KPI（PlayStats）が出揃う
+    const r = sm.end(s, 'stuck');
+    expect(s.stats.combineSuccess).toBe(1);
+    expect(s.stats.combineMiss).toBe(1);
+    expect(s.stats.hintUsed).toBe(1);
+    expect(s.stats.newDiscoveries).toBe(1);
+    expect(s.stats.endReason).toBe('stuck');
+    expect(s.stats.finalScore).toBe(s.score.score);
+    expect(s.stats.durationMs).toBeGreaterThanOrEqual(0);
+    // 結果（GameResult）にも終了理由・所要時間が伝播する
+    expect(r.reason).toBe('stuck');
+    expect(r.durationMs).toBe(s.stats.durationMs);
+  });
+});
