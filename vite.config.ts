@@ -1,6 +1,25 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
+
+// CSP meta（Phase1 最厳格・architecture 6.2 / T-026）。本番ビルドのみ注入する。
+// devサーバーはSvelteのHMRがインラインstyleタグを使うため、CSPを適用すると全コンポーネントの
+// スタイルがブロックされる。本番ビルドHTMLはインラインJS/CSSを含まず（エントリJS・registerSW.js
+// は外部src、CSSも外部href）、辞書JSON/SW/manifestは同一オリジンのため 'self' で成立する。
+// GitHub Pages は _headers を解釈しないため meta で全配信先に適用し、Phase2のランキングBE導入時は
+// connect-src を段階開放する（_headers と合わせて更新）。
+function cspMetaPlugin(): Plugin {
+  return {
+    name: 'inject-csp-meta',
+    apply: 'build',
+    transformIndexHtml(html) {
+      return html.replace(
+        '<meta name="viewport"',
+        `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'" />\n    <meta name="viewport"`
+      );
+    },
+  };
+}
 
 // 静的Webアプリ（SSR無し）。vite-plugin-pwa で最小SWを有効化し、初回ロード後の完全オフライン動作を
 // 保証する（architecture 1.3/9.1・PRD非機能・T-024）。ホーム追加/インストール等の体験強化は後続フェーズ。
@@ -12,6 +31,7 @@ export default defineConfig({
   base: process.env.DEPLOY_BASE || '/',
   plugins: [
     svelte(),
+    cspMetaPlugin(),
     VitePWA({
       // 新SWは即時に制御を取得（skipWaiting + clientsClaim）。辞書更新時も次回読込で確実に差し替わる。
       registerType: 'autoUpdate',
