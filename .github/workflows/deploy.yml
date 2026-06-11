@@ -1,0 +1,48 @@
+name: Deploy
+
+# main マージ（push）を契機に静的サイトを GitHub Pages へ自動デプロイする（T-026 / architecture 3）。
+# サーバー0台・運用費0円。外部シークレット不要で GITHUB_TOKEN(OIDC) のみで完結する。
+# 品質ゲートは ci.yml（push:main で並走）が担保し、本ワークフローはビルド失敗時に自動停止する。
+#
+# 【初回のみ必要な手動設定】リポジトリ Settings > Pages > Build and deployment > Source を
+# 「GitHub Actions」に設定すること。未設定だと初回デプロイが "Get Pages site failed" で失敗する。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GitHub Pages への OIDC デプロイに必要な最小権限。
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# デプロイは直列化（進行中を打ち切らず順に反映）。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run gen:data # 辞書生成 → public/data/*.json（ビルドの入力）
+      - run: npm run build # 静的アセットを dist/ へ出力
+        env:
+          # プロジェクトページのサブパス配信に合わせて base を切り替える（BASE_URL に反映）。
+          DEPLOY_BASE: /kanji_gacha/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

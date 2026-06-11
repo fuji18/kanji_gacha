@@ -212,6 +212,7 @@ kanji_gacha/
 | 配信ヘッダ | `_headers`（CSP・環境別） |
 
 > **`_headers` の環境別管理（architecture 6.2）**：単一の `_headers` をベースに、Phase進行でCSPを段階開放する（Phase1=`default-src 'self'`／Phase2=`connect-src`追加／ネイティブ=広告ドメイン許可）。ステージング/本番で出し分ける場合はCIのデプロイ環境で切り替える。
+> **GitHub Pages 併用（T-026）**：Phase1 の採用先 GitHub Pages は `_headers` を解釈しないため、CSP は `index.html` の `<meta http-equiv>` でも適用する（全配信先で有効）。`_headers` は Cloudflare Pages / Netlify へ移行した際にそのまま機能する想定で併置する。デプロイは `.github/workflows/deploy.yml`（`main` push → GitHub Pages）。
 > **PWA生成物**：`vite-plugin-pwa` 有効時、本番ビルドで `sw.js`/`workbox-*.js` が `dist/` に生成される（除外は8.1の `dist/` でカバー）。
 
 ---

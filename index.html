@@ -2,6 +2,8 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <!-- CSP meta はビルド時に vite.config.ts のプラグインが注入する（T-026）。
+         devサーバーはSvelteのHMRがインラインstyleを使うためCSPを適用しない。 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>漢字合体ガチャ</title>
   </head>
