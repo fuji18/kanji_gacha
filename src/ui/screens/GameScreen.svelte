@@ -277,6 +277,7 @@
       comboCount={view.score.comboCount}
       gachaRemaining={view.gachaRemaining}
       showGachaRemaining={!isTimeAttack}
+      remainingLabel="山札"
     />
 
     <p class="feedback" role="status" data-testid="feedback">{feedback}</p>
@@ -328,6 +329,7 @@
         remaining={view.gachaRemaining}
         disabled={!canPull}
         showRemaining={!isTimeAttack}
+        remainingLabel="山札"
         onclick={doGacha}
       />
       <MaterialButton

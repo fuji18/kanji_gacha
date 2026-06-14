@@ -6,25 +6,36 @@ import { test, expect, type Page } from '@playwright/test';
 // 決定性は `?seed=` で確保し、終了までヒント合体を繰り返す。
 
 const SEED = 12345;
+// 達成型（deck）の山札は大きいので、E2E では `?deckMax` で短縮して終了に到達させる。
+const DECK_MAX = 30;
 
-/** 残が尽きるまでガチャ → ヒント合体を繰り返し、Result へ到達させる。 */
+/** 山札を引き、合体/捨てを循環して deck_empty まで Result へ到達させる。 */
 async function playToResult(page: Page): Promise<void> {
-  await page.goto(`/?seed=${SEED}`);
+  await page.goto(`/?seed=${SEED}&deckMax=${DECK_MAX}`);
   await page.getByRole('button', { name: 'やさしいでゲーム開始' }).click();
   const gacha = page.getByRole('button', { name: /ガチャ/ });
-  for (let i = 0; i < 30; i++) {
-    if (!(await gacha.isEnabled())) break;
-    await gacha.click();
-  }
   const resultHeading = page.getByRole('heading', { name: '結果' });
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 200; i++) {
+    if (await resultHeading.isVisible()) return;
+    while (
+      (await page.locator('.chip').count()) < 12 &&
+      (await gacha.isEnabled())
+    ) {
+      await gacha.click();
+    }
     if (await resultHeading.isVisible()) return;
     await page.getByRole('button', { name: 'ヒント' }).click();
     const hinted = page.locator('.chip[data-hinted="true"]');
-    if ((await hinted.count()) === 0) break;
-    for (let j = 0, n = await hinted.count(); j < n; j++)
-      await hinted.nth(j).click();
-    await page.getByRole('button', { name: '合体！' }).click();
+    const n = await hinted.count();
+    if (n >= 2) {
+      for (let j = 0; j < n; j++) await hinted.nth(j).click();
+      await page.getByRole('button', { name: '合体！' }).click();
+    } else {
+      const chips = page.locator('.chip');
+      if ((await chips.count()) === 0) break;
+      await chips.first().click();
+      await page.getByRole('button', { name: '捨てて引き直す' }).click();
+    }
   }
   await expect(resultHeading).toBeVisible();
 }

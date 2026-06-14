@@ -13,10 +13,11 @@ export type Rarity = 1 | 2 | 3 | 4 | 5;
 export type Level = 'elementary' | 'juniorhigh' | 'joyo'; // やさ / ふつう / むず
 
 /**
- * ゲーム種別（T-027・企画整理書 §11）。`mode（free/daily）` と直交する軸。
- *  - gachaCount：ガチャ残り回数制（既存・運寄り）。残0＋詰み/手札0で終了。
- *  - timeAttack：持ち時間制（実力寄り）。ガチャ無制限・成功で時間延長・残時間0で終了。 */
-export type GameMode = 'gachaCount' | 'timeAttack';
+ * ゲーム種別。`mode（free/daily）` と直交する軸。
+ *  - deck：山札（達成型）。対象レベルの漢字を分解した有限デッキを非復元で引き、
+ *    対象漢字をどれだけ完成できたか（収集率）で評価する。回数制限なし・山札枯渇＋手詰まりで終了。
+ *  - timeAttack：持ち時間制（実力寄り）。ガチャ無制限・成功で時間延長・残時間0で終了（常用スコープ）。 */
+export type GameMode = 'deck' | 'timeAttack';
 
 /**
  * 合体辞書キー。構成部品idを昇順ソートして "+" 連結したマルチセット
@@ -92,7 +93,7 @@ export interface PlayStats {
   combineMiss: number; // ミス回数
   hintUsed: number; // ヒント利用回数
   discardUsed: number; // 捨てる利用回数
-  endReason: 'stuck' | 'empty_hand' | 'timeup' | null; // 詰み / 手札0 / 時間切れ（PRD 詰み終了率・T-027）
+  endReason: 'stuck' | 'empty_hand' | 'timeup' | 'deck_empty' | null; // 詰み/手札0/時間切れ/山札枯渇
   finalScore: number;
   newDiscoveries: number;
   durationMs: number;
@@ -102,10 +103,15 @@ export interface PlayStats {
 export interface GameSession {
   level: Level;
   mode: 'free' | 'daily';
-  gameMode: GameMode; // ガチャ回数制 / タイムアタック（T-027）
+  gameMode: GameMode; // 山札（達成型）/ タイムアタック
   seed: number | null; // daily は dailySeed の整数値（機能設計4.6）。free は null
-  gachaRemaining: number; // 残りガチャ回数（初期 GACHA_COUNT・暫定。timeAttack では未使用）
-  // タイムアタック専用。終了予定の絶対時刻（epoch ms）。gachaCount では null。
+  // deck モード：残り山札（partId 配列・末尾から非復元で引く）。timeAttack では空。
+  deck: string[];
+  // deck モードの達成型分母（対象レベルの完成可能漢字数）。timeAttack では0。
+  targetTotal: number;
+  // deck モードの山札残数（= deck.length と同期、UI 表示・canPull 用）。timeAttack では未使用。
+  gachaRemaining: number;
+  // タイムアタック専用。終了予定の絶対時刻（epoch ms）。deck では null。
   deadlineAtMs: number | null;
   // タイムアタックの速攻ボーナス判定用。直近の合体成功時刻（epoch ms）。未成功は null。
   lastSuccessAtMs: number | null;
@@ -124,14 +130,17 @@ export interface GameSession {
 export interface GameResult {
   level: Level;
   mode: 'free' | 'daily';
-  gameMode: GameMode; // ガチャ回数制 / タイムアタック（再挑戦・ベスト表示用・T-027）
+  gameMode: GameMode; // 山札（達成型）/ タイムアタック（再挑戦・ベスト表示用）
   score: number; // 最終スコア
   rank: string; // 称号（resolveRank の結果）
   createdKanji: string[]; // 作成漢字一覧（重複可・シェアの代表選定にも使う）
   newlyDiscovered: string[]; // 今回新規に図鑑追加された漢字
-  reason: 'stuck' | 'empty_hand' | 'timeup'; // 終了理由（KPI と一致）
+  reason: 'stuck' | 'empty_hand' | 'timeup' | 'deck_empty'; // 終了理由（KPI と一致）
   durationMs: number; // 所要時間
   isNewBest: boolean; // 今回スコアがモード別ベストを更新したか（新記録明示・PRD F9）
+  // deck モードの収集実績（達成型評価）。完成できた対象漢字数 / 対象総数。timeAttack では 0/0。
+  completedCount: number;
+  targetTotal: number;
 }
 
 // ===== 永続データ（localStorage・機能設計3.3） =====

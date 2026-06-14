@@ -7,17 +7,20 @@
     remaining: number;
     disabled?: boolean;
     onclick?: () => void;
-    /** 残回数を併記するか。タイムアタックは無制限のため false（既定 true で従来通り）。 */
+    /** 残数を併記するか。タイムアタックは無制限のため false（既定 true で従来通り）。 */
     showRemaining?: boolean;
+    /** 残数の見出し。達成型（deck）は「山札」、それ以外は「残」（既定）。 */
+    remainingLabel?: string;
   }
   let {
     remaining,
     disabled = false,
     onclick,
     showRemaining = true,
+    remainingLabel = '残',
   }: Props = $props();
 </script>
 
 <MaterialButton variant="filled" color="primary" {disabled} {onclick}>
-  {#if showRemaining}ガチャ（残 {remaining}）{:else}ガチャ{/if}
+  {#if showRemaining}ガチャ（{remainingLabel} {remaining}）{:else}ガチャ{/if}
 </MaterialButton>

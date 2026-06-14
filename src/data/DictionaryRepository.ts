@@ -60,6 +60,9 @@ export class DictionaryRepository {
   private kanjiMap: Map<string, KanjiEntry> | null = null;
   private poolByLevel: Record<Level, Part[]> | null = null;
   private reachable: ReachableMeta | null = null;
+  private partById: Map<string, Part> | null = null;
+  // 漢字 → 代表分解エントリ（山札構築・達成型の makeable 判定に使う）。load 後に遅延構築。
+  private deckEntryByKanji: Map<string, CombineEntry> | null = null;
 
   /** 取得元のベースURL。末尾 '/' を保証して `${baseUrl}data/...` が常に正しく連結されるようにする。 */
   private readonly baseUrl: string;
@@ -93,12 +96,18 @@ export class DictionaryRepository {
 
       this.kanjiMap = new Map(kanji.map((k) => [k.char, k]));
       this.combineMap = new Map(combine.map((c) => [c.key, c]));
+      this.partById = new Map(parts.map((p) => [p.id, p]));
       this.poolByLevel = {
         elementary: parts.filter((p) => p.scopes.includes('elementary')),
         juniorhigh: parts.filter((p) => p.scopes.includes('juniorhigh')),
         joyo: parts.filter((p) => p.scopes.includes('joyo')),
       };
       this.reachable = reachable;
+      // 山札の代表分解インデックスはロード直後に1度だけ構築する（getDeck 等を O(1) 化）。
+      this.deckEntryByKanji = this.buildDeckEntryIndex(
+        this.kanjiMap,
+        this.combineMap
+      );
     } catch (cause) {
       // 既に DictionaryLoadError ならそのまま、想定外（パース失敗等）も同型に正規化する。
       if (cause instanceof DictionaryLoadError) throw cause;
@@ -143,9 +152,77 @@ export class DictionaryRepository {
     return this.requireCombine().get(key);
   }
 
-  /** 指定レベルの scope に属する部品プールを返す（ガチャ抽選の母集合・load 時に構築済みで O(1)）。 */
+  /** 指定レベルの scope に属する部品プールを返す（タイムアタックの重み付き抽選の母集合・O(1)）。 */
   getPool(level: Level): Part[] {
     return this.requirePool()[level];
+  }
+
+  /**
+   * 達成型（山札）の対象漢字一覧（T: レベル再設計）。`kanji.level === level` かつ
+   * 分解エントリを持つ（＝部品から作れる）漢字のみを返す。収集率の分母に使う。
+   * deck レベル（elementary / juniorhigh）で用いる。
+   */
+  deckTargetKanji(level: Level): string[] {
+    const index = this.requireDeckIndex();
+    const out: string[] = [];
+    for (const k of this.requireKanji().values()) {
+      if (k.level === level && index.has(k.char)) out.push(k.char);
+    }
+    return out;
+  }
+
+  /**
+   * 達成型（山札）の部品デッキを構築する（T: レベル再設計）。対象レベルの各漢字の代表分解の
+   * 構成部品を**重複ありで全投入**した配列を返す（同一部品が複数漢字に現れれば複数枚入る）。
+   * 順序は未シャッフル（アプリ層が RNG でシャッフルして使う）。
+   */
+  buildDeck(level: Level): Part[] {
+    const index = this.requireDeckIndex();
+    const parts = this.requirePartById();
+    const deck: Part[] = [];
+    for (const char of this.deckTargetKanji(level)) {
+      const entry = index.get(char);
+      if (entry === undefined) continue;
+      for (const id of entry.key.split('+')) {
+        const part = parts.get(id);
+        if (part !== undefined) deck.push(part);
+      }
+    }
+    return deck;
+  }
+
+  /**
+   * 漢字 → 代表分解エントリのインデックスを構築する。`primary === 漢字` のエントリを優先し、
+   * 無ければ `results` に含むエントリを採用する。同条件では partCount が小さい（単純な）分解を選ぶ。
+   */
+  private buildDeckEntryIndex(
+    kanji: Map<string, KanjiEntry>,
+    combine: Map<CombineKey, CombineEntry>
+  ): Map<string, CombineEntry> {
+    const known = kanji; // 対象は漢字マスタに存在する字のみ
+    const primary = new Map<string, CombineEntry>();
+    const fallback = new Map<string, CombineEntry>();
+    const better = (a: CombineEntry, b: CombineEntry | undefined): boolean =>
+      b === undefined || a.partCount < b.partCount;
+
+    for (const entry of combine.values()) {
+      if (
+        known.has(entry.primary) &&
+        better(entry, primary.get(entry.primary))
+      ) {
+        primary.set(entry.primary, entry);
+      }
+      for (const char of entry.results) {
+        if (known.has(char) && better(entry, fallback.get(char))) {
+          fallback.set(char, entry);
+        }
+      }
+    }
+
+    // primary 優先でマージ（primary に無い字だけ fallback で補完）。
+    const index = new Map<string, CombineEntry>(fallback);
+    for (const [char, entry] of primary) index.set(char, entry);
+    return index;
   }
 
   /** 図鑑収集率の分母＝到達可能な primary 漢字総数 N（機能設計8.1）。 */
@@ -183,6 +260,16 @@ export class DictionaryRepository {
   private requireReachable(): ReachableMeta {
     if (this.reachable === null) throw notLoaded();
     return this.reachable;
+  }
+
+  private requirePartById(): Map<string, Part> {
+    if (this.partById === null) throw notLoaded();
+    return this.partById;
+  }
+
+  private requireDeckIndex(): Map<string, CombineEntry> {
+    if (this.deckEntryByKanji === null) throw notLoaded();
+    return this.deckEntryByKanji;
   }
 }
 
