@@ -31,6 +31,13 @@ function sessionOptionsFromUrl(): SessionManagerOptions {
     if (Number.isFinite(taMs) && taMs > 0) opts.timeAttackInitialMs = taMs;
   }
 
+  // `?deckMax=<整数>` で達成型（deck）の山札枚数を上限する（E2E 短縮用の無害なレバー）。
+  const rawDeckMax = params.get('deckMax');
+  if (rawDeckMax !== null) {
+    const deckMax = Number(rawDeckMax);
+    if (Number.isFinite(deckMax) && deckMax > 0) opts.deckLimit = deckMax;
+  }
+
   return opts;
 }
 

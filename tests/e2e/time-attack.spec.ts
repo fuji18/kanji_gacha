@@ -8,26 +8,21 @@ import { test, expect, type Page } from '@playwright/test';
 
 const SEED = 12345;
 
-/** タイムアタックを開始する（taMs で持ち時間を短縮）。 */
+/** タイムアタック（常用）を開始する（taMs で持ち時間を短縮）。 */
 async function startTimeAttack(page: Page, taMs: number): Promise<void> {
   await page.goto(`/?seed=${SEED}&taMs=${taMs}`);
-  await page
-    .getByRole('button', { name: 'やさしいでタイムアタック開始' })
-    .click();
+  await page.getByRole('button', { name: '常用でタイムアタック開始' }).click();
   await expect(page.getByRole('button', { name: /ガチャ/ })).toBeVisible();
 }
 
-test('Home にタイムアタックの導線とベスト表示がある', async ({ page }) => {
+test('Home に常用タイムアタックの導線とベスト表示がある', async ({ page }) => {
   await page.goto('/');
-  // 3レベル分のタイムアタック開始ボタンが存在する
-  for (const label of ['やさしい', 'ふつう', 'むずかしい']) {
-    await expect(
-      page.getByRole('button', { name: `${label}でタイムアタック開始` })
-    ).toBeVisible();
-  }
-  // 初期はタイムアタックベスト 0（.ta-best はタイムアタックカード分）
-  await expect(page.locator('.ta-best')).toHaveCount(3);
-  await expect(page.locator('.ta-best').first()).toHaveText('ベスト 0');
+  // タイムアタックは常用漢字すべての単一導線（レベル選択なし・レベル再設計）
+  await expect(
+    page.getByRole('button', { name: '常用でタイムアタック開始' })
+  ).toBeVisible();
+  await expect(page.locator('.ta-best')).toHaveCount(1);
+  await expect(page.locator('.ta-best')).toHaveText('ベスト 0');
 });
 
 test('開始すると残り時間が表示され、ガチャ残は表示されない', async ({

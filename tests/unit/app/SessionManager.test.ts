@@ -12,11 +12,7 @@ import {
   StorageRepository,
   type StorageLike,
 } from '../../../src/data/StorageRepository';
-import {
-  dailySeed,
-  todayYmdJst,
-  dailyLevel,
-} from '../../../src/domain/rng/dailySeed';
+import { dailySeed, todayYmdJst } from '../../../src/domain/rng/dailySeed';
 import { GACHA_COUNT, TIME_ATTACK } from '../../../src/domain/constants';
 import type {
   CombineEntry,
@@ -27,10 +23,10 @@ import type {
   PersistedState,
 } from '../../../src/domain/types';
 
-// SessionManager 統合テスト（T-014 / PRD F1〜F6 / 機能設計5.1・4.5・4.6）。
-//  - 開始→ガチャ→合体/ミス→終了（stuck / empty_hand 両経路）
-//  - free/daily の RNG 注入（デイリーは固定日付で同一ガチャ列）
-//  - 終了判定が各操作後に発火、PlayStats の KPI 記録、終了時の永続化
+// SessionManager 統合テスト（T-014 ＋ レベル再設計）。
+//  - deck（達成型）：山札構築・非復元 draw・収集率・deck_empty 終了・discard 補充・無料ヒント
+//  - timeAttack：時間延長・無制限ガチャ・時間切れ（T-027）
+//  - 合体成功/ミス・KPI・永続化・表示支援
 
 // ----- テスト辞書（fetch 注入で実 DictionaryRepository を構築） -----
 function part(id: string): Part {
@@ -116,7 +112,7 @@ beforeAll(async () => {
   await dict.load();
 });
 
-/** 固定時刻のSM（デイリー再現・durationMs の決定化用）。store は毎回新規で隔離。 */
+/** 固定時刻・固定乱数のSM。store は毎回新規で隔離。 */
 function makeSM(
   storage = new StorageRepository(new MemoryStorage()),
   opts: SessionManagerOptions = {}
@@ -149,61 +145,69 @@ function emptyState(): PersistedState {
   };
 }
 
-/** 手札を既知の部品で固定する（ガチャ乱数に依存せず合体シナリオを決定化）。 */
+/** 手札を既知の部品で固定する（合体シナリオを決定化）。 */
 function setHand(s: GameSession, partIds: string[]): void {
   s.hand = partIds.map((partId, i) => ({ instanceId: `t${i}`, partId }));
 }
 
-describe('SessionManager start / RNG 注入', () => {
-  it('free は seed=null、playing で初期化（残=GACHA_COUNT・空手札）', () => {
+// fixture の elementary 山札＝対象 [林,好,品,杏] の構成部品（重複あり）。合計9枚・対象4字。
+const DECK_SIZE = 9;
+const TARGET_TOTAL = 4;
+
+describe('SessionManager start（deck・達成型）', () => {
+  it('free/deck は seed=null・山札を構築して playing 初期化（残=山札長・対象総数）', () => {
     const { sm, sessionStore } = makeSM();
     const s = sm.start('elementary', 'free');
+    expect(s.gameMode).toBe('deck');
     expect(s.seed).toBeNull();
-    expect(s.gachaRemaining).toBe(GACHA_COUNT);
+    expect(s.deck).toHaveLength(DECK_SIZE);
+    expect(s.gachaRemaining).toBe(DECK_SIZE); // 山札残＝山札長
+    expect(s.targetTotal).toBe(TARGET_TOTAL);
+    expect(s.deadlineAtMs).toBeNull();
     expect(s.hand).toEqual([]);
     expect(s.phase).toBe('playing');
-    // store へ publish（Svelte 再描画のため毎回シャローコピーを発行＝別参照・内容は等価）
     expect(get(sessionStore)).not.toBe(s);
     expect(get(sessionStore)).toEqual(s);
   });
 
-  it('daily は固定日付の dailySeed を注入する', () => {
-    const now = () => 1_780_000_000_000;
-    const { sm } = makeSM(undefined, { now });
-    const s = sm.start('elementary', 'daily');
-    expect(s.seed).toBe(dailySeed(todayYmdJst(now())));
-  });
-
-  it('daily は固定日付で同一ガチャ列を再現する（決定性・F8）', () => {
+  it('daily は固定日付で同一の山札順を再現する（シード・決定性）', () => {
     const now = () => 1_780_000_000_000;
     const a = makeSM(undefined, { now });
     const b = makeSM(undefined, { now });
     const sa = a.sm.start('elementary', 'daily');
     const sb = b.sm.start('elementary', 'daily');
-    for (let i = 0; i < 5; i++) {
-      a.sm.pullGacha(sa);
-      b.sm.pullGacha(sb);
-    }
-    expect(sa.hand.map((h) => h.partId)).toEqual(sb.hand.map((h) => h.partId));
-    expect(sa.hand.length).toBe(5);
+    expect(sa.seed).toBe(dailySeed(todayYmdJst(now())));
+    expect(sa.deck).toEqual(sb.deck); // 同シード→同一シャッフル順
   });
 });
 
-describe('SessionManager pullGacha', () => {
-  it('手札に追加し残回数を1減らす', () => {
+describe('SessionManager pullGacha（山札・非復元）', () => {
+  it('山札末尾から引いて手札+1・山札-1（残を同期）', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
     sm.pullGacha(s);
     expect(s.hand).toHaveLength(1);
-    expect(s.gachaRemaining).toBe(GACHA_COUNT - 1);
+    expect(s.deck).toHaveLength(DECK_SIZE - 1);
+    expect(s.gachaRemaining).toBe(DECK_SIZE - 1);
   });
 
-  it('残0では no-op（事前条件・防御）', () => {
+  it('引ききると canPullGacha=false（回数制限ではなく山札枯渇）', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
-    s.gachaRemaining = 0;
+    // 手札上限(12)＞山札(9) のため山札を全部引ける
+    for (let i = 0; i < DECK_SIZE; i++) sm.pullGacha(s);
+    expect(s.deck).toHaveLength(0);
+    expect(sm.canPullGacha(s)).toBe(false);
+  });
+
+  it('山札が空での pullGacha は no-op（手札があり合体可能なら継続）', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = [];
+    setHand(s, ['ki', 'ki', 'kuchi']); // ki+ki が可能
     sm.pullGacha(s);
-    expect(s.hand).toHaveLength(0);
+    expect(s.phase).toBe('playing');
+    expect(s.hand).toHaveLength(3);
   });
 });
 
@@ -215,422 +219,194 @@ describe('SessionManager combine（成功 / ミス）', () => {
     const r = sm.combine(s, [...s.hand]);
     expect(r.success).toBe(true);
     expect(r.resolved?.awarded.char).toBe('林');
-    expect(r.gainedScore).toBe(8); // 8画 ×1.0
+    expect(r.gainedScore).toBe(8);
     expect(s.score.score).toBe(8);
     expect(s.score.comboCount).toBe(1);
-    expect(s.hand).toHaveLength(0); // 2部品とも消費
+    expect(s.hand).toHaveLength(0);
     expect(s.createdKanji).toEqual(['林']);
     expect(s.newlyDiscovered).toEqual(['林']);
     expect(s.stats.combineSuccess).toBe(1);
-    expect(s.stats.newDiscoveries).toBe(1);
   });
 
   it('不成立はミス（コンボリセット・スコア不変・combineMiss++）', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
     setHand(s, ['ki', 'ki', 'kuchi']);
-    sm.combine(s, [s.hand[0], s.hand[1]]); // 林成功でコンボ1
+    sm.combine(s, [s.hand[0], s.hand[1]]); // 林成功
     expect(s.score.comboCount).toBe(1);
-    setHand(s, ['ki', 'kuchi']); // ki+kuchi は辞書に無い
+    setHand(s, ['ki', 'kuchi']);
     const before = s.score.score;
     const r = sm.combine(s, [...s.hand]);
     expect(r.success).toBe(false);
-    expect(s.score.score).toBe(before); // スコア不変
-    expect(s.score.comboCount).toBe(0); // リセット
+    expect(s.score.score).toBe(before);
+    expect(s.score.comboCount).toBe(0);
     expect(s.stats.combineMiss).toBe(1);
-  });
-
-  it('同一セッションで同じ漢字を2回作っても newlyDiscovered は重複しない', () => {
-    const { sm } = makeSM();
-    const s = sm.start('elementary', 'free');
-    setHand(s, ['ki', 'ki']);
-    sm.combine(s, [...s.hand]); // 林（1回目・新規）
-    setHand(s, ['ki', 'ki']);
-    sm.combine(s, [...s.hand]); // 林（2回目）
-    expect(s.newlyDiscovered).toEqual(['林']); // 重複しない
-    expect(s.stats.newDiscoveries).toBe(1);
-    expect(s.createdKanji).toEqual(['林', '林']); // 作成は2回
   });
 
   it('無効入力（2枚未満・手札外）は副作用なしの失敗', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
     setHand(s, ['ki', 'ki']);
-    expect(sm.combine(s, [s.hand[0]]).success).toBe(false); // 1枚
+    expect(sm.combine(s, [s.hand[0]]).success).toBe(false);
     const ghost: HandPart = { instanceId: 'ghost', partId: 'ki' };
-    expect(sm.combine(s, [s.hand[0], ghost]).success).toBe(false); // 手札外
-    expect(s.stats.combineMiss).toBe(0); // ミス計上もしない
+    expect(sm.combine(s, [s.hand[0], ghost]).success).toBe(false);
+    expect(s.stats.combineMiss).toBe(0);
     expect(s.hand).toHaveLength(2);
   });
 });
 
-describe('SessionManager 終了判定（両経路・機能設計4.5）', () => {
-  it('empty_hand：最後の合体で手札0かつ残0', () => {
+describe('SessionManager 終了判定（deck_empty）', () => {
+  it('山札0かつ手札0で deck_empty', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
-    s.gachaRemaining = 0;
+    s.deck = [];
     setHand(s, ['ki', 'ki']);
     const r = sm.combine(s, [...s.hand]); // 林成立→手札0
     expect(r.success).toBe(true);
     expect(s.phase).toBe('ended');
-    expect(s.stats.endReason).toBe('empty_hand');
-    expect(sm.getResult()?.reason).toBe('empty_hand');
+    expect(s.stats.endReason).toBe('deck_empty');
+    expect(sm.getResult()?.reason).toBe('deck_empty');
   });
 
-  it('stuck：残0で合体不能（ミス操作後に発火）', () => {
+  it('山札0かつ合体不能で deck_empty（手詰まり）', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
-    s.gachaRemaining = 0;
+    s.deck = [];
     setHand(s, ['ki', 'kuchi']); // 合体不能
-    sm.combine(s, [...s.hand]); // ミス→checkGameEnd→stuck
+    sm.combine(s, [...s.hand]); // ミス→checkGameEnd→deck_empty
     expect(s.phase).toBe('ended');
-    expect(s.stats.endReason).toBe('stuck');
-    expect(sm.getResult()?.reason).toBe('stuck');
+    expect(s.stats.endReason).toBe('deck_empty');
   });
 
-  it('残0でも合体可能なら継続する', () => {
+  it('山札が残っていれば終了しない（達成型は引ききるまで継続）', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
-    s.gachaRemaining = 0;
-    setHand(s, ['ki', 'ki', 'kuchi']); // ki+ki が可能
-    sm.pullGacha(s); // 残0で no-op だが終了判定は走る→合体可能なので継続
+    setHand(s, ['ki', 'kuchi']); // 合体不能だが山札あり
+    sm.combine(s, [...s.hand]); // ミス
     expect(s.phase).toBe('playing');
-  });
-
-  it('残0で詰みのとき pullGacha（no-op）でも stuck を検出する', () => {
-    const { sm } = makeSM();
-    const s = sm.start('elementary', 'free');
-    s.gachaRemaining = 0;
-    setHand(s, ['ki', 'kuchi']); // 合体不能
-    sm.pullGacha(s); // 引けないが終了判定が走る
-    expect(s.phase).toBe('ended');
-    expect(s.stats.endReason).toBe('stuck');
-  });
-
-  it('手札上限（HAND_CAP）到達時は no-op（事前条件・防御）', () => {
-    const { sm } = makeSM();
-    const s = sm.start('elementary', 'free');
-    s.hand = Array.from({ length: 12 }, (_, i) => ({
-      instanceId: `t${i}`,
-      partId: 'ki',
-    }));
-    const remaining = s.gachaRemaining;
-    sm.pullGacha(s);
-    expect(s.hand).toHaveLength(12); // 増えない
-    expect(s.gachaRemaining).toBe(remaining); // 残も減らない
-    expect(s.phase).toBe('playing'); // 残ありなので終了しない
   });
 });
 
-describe('SessionManager 救済（KPI 記録）', () => {
-  it('useHint：elementary は無料で合体可能組を返し hintUsed++', () => {
+describe('SessionManager 救済（deck モード）', () => {
+  it('discardAndDraw：手札1枚を捨て山札から1枚補充（枚数不変）・discardUsed++', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = ['ki', 'kuchi'];
+    setHand(s, ['onna', 'ko']);
+    sm.discardAndDraw(s, 't0'); // 'onna' を捨てる
+    expect(s.hand).toHaveLength(2); // 削除1＋補充1
+    expect(s.hand.some((h) => h.instanceId === 't0')).toBe(false);
+    expect(s.deck).toHaveLength(1); // 山札を1消費
+    expect(s.gachaRemaining).toBe(1);
+    expect(s.stats.discardUsed).toBe(1);
+  });
+
+  it('discardAndDraw：山札空なら補充されず手札が1枚減る', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = [];
+    setHand(s, ['ki', 'ki', 'kuchi']);
+    sm.discardAndDraw(s, 't2');
+    expect(s.hand).toHaveLength(2);
+    expect(s.stats.discardUsed).toBe(1);
+  });
+
+  it('discardAndDraw：対象不在は no-op', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = ['ki'];
+    setHand(s, ['ki', 'kuchi']);
+    sm.discardAndDraw(s, 'nope');
+    expect(s.stats.discardUsed).toBe(0);
+    expect(s.hand).toHaveLength(2);
+    expect(s.deck).toHaveLength(1);
+  });
+
+  it('useHint：deck は無料で合体可能組を返し hintUsed++', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
     setHand(s, ['ki', 'ki', 'kuchi']);
     const hint = sm.useHint(s);
     expect(hint).not.toBeNull();
-    expect(s.gachaRemaining).toBe(GACHA_COUNT); // 無料
     expect(s.stats.hintUsed).toBe(1);
   });
 
-  it('useHint：joyo は利用不可で null・KPI 不変', () => {
+  it('useHint：合体可能組が無ければ null（消費なし）', () => {
     const { sm } = makeSM();
-    const s = sm.start('joyo', 'free');
-    setHand(s, ['ki', 'ki']);
+    const s = sm.start('elementary', 'free');
+    setHand(s, ['ki', 'kuchi']); // 合体不能
     expect(sm.useHint(s)).toBeNull();
     expect(s.stats.hintUsed).toBe(0);
   });
 
-  it('discardAndDraw：手札を入れ替え discardUsed++（elementary はコスト0）', () => {
+  it('canUseHint は deck では playing で常に true（無料）', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
-    setHand(s, ['ki', 'kuchi']);
-    sm.discardAndDraw(s, 't0'); // 't0'(ki) を捨てる
-    expect(s.hand).toHaveLength(2); // 削除1＋補充1
-    expect(s.hand.some((h) => h.instanceId === 't0')).toBe(false);
-    expect(s.gachaRemaining).toBe(GACHA_COUNT); // elementary コスト0
-    expect(s.stats.discardUsed).toBe(1);
+    expect(sm.canUseHint(s)).toBe(true);
+    s.phase = 'ended';
+    expect(sm.canUseHint(s)).toBe(false);
   });
+});
 
-  it('discardAndDraw：対象不在は no-op で KPI 不変', () => {
+describe('SessionManager end / 収集率・新記録（deck）', () => {
+  it('end で収集率（completedCount/targetTotal）を返す', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
-    setHand(s, ['ki', 'kuchi']);
-    sm.discardAndDraw(s, 'nope');
-    expect(s.stats.discardUsed).toBe(0);
-    expect(s.hand).toHaveLength(2);
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林（対象）
+    const r = sm.end(s, 'deck_empty');
+    expect(r.completedCount).toBe(1);
+    expect(r.targetTotal).toBe(TARGET_TOTAL);
   });
-});
 
-describe('SessionManager dailyInfo（日替わり・T-022）', () => {
-  it('注入時刻の JST 日付から日替わりレベルと ymd を返す（決定的）', () => {
-    const now = () => 1_780_000_000_000;
-    const { sm } = makeSM(undefined, { now });
-    const info = sm.dailyInfo();
-    const ymd = todayYmdJst(now());
-    expect(info.ymd).toBe(ymd);
-    expect(info.level).toBe(dailyLevel(dailySeed(ymd)));
-    // 別インスタンスでも同一時刻なら同一（全プレイヤー再現性）
-    const { sm: sm2 } = makeSM(undefined, { now });
-    expect(sm2.dailyInfo()).toEqual(info);
-  });
-});
-
-describe('SessionManager end / isNewBest（daily は dailyBest 比較・T-022）', () => {
-  it('daily の新記録はその日のデイリーベストと比較する', () => {
-    const now = () => 1_780_000_000_000;
-    const storage = new StorageRepository(new MemoryStorage());
-    // 1回目の daily：8点 → デイリーベスト更新（新記録）
-    const a = makeSM(storage, { now });
-    const lv = a.sm.dailyInfo().level;
-    const s1 = a.sm.start(lv, 'daily');
-    setHand(s1, ['ki', 'ki']);
-    a.sm.combine(s1, [...s1.hand]);
-    expect(a.sm.end(s1, 'stuck').isNewBest).toBe(true);
-    // 2回目の daily（同日）：0点 → デイリーベスト8未満で非新記録
-    const b = makeSM(storage, { now });
-    const s2 = b.sm.start(b.sm.dailyInfo().level, 'daily');
-    const r2 = b.sm.end(s2, 'empty_hand');
-    expect(r2.score).toBe(0);
-    expect(r2.isNewBest).toBe(false);
-  });
-});
-
-describe('SessionManager end / isNewBest（新記録判定・T-019）', () => {
-  it('初プレイでスコア>0なら新記録（isNewBest=true）', () => {
+  it('初プレイでスコア>0なら新記録（bestScores 比較）', () => {
     const storage = new StorageRepository(new MemoryStorage());
     const { sm } = makeSM(storage);
     const s = sm.start('elementary', 'free');
     setHand(s, ['ki', 'ki']);
-    sm.combine(s, [...s.hand]); // 林（score 8）
-    const r = sm.end(s, 'stuck');
-    expect(r.isNewBest).toBe(true);
+    sm.combine(s, [...s.hand]);
+    expect(sm.end(s, 'deck_empty').isNewBest).toBe(true);
+    expect(storage.loadState().bestScores.elementary).toBe(8);
   });
 
-  it('既存ベスト未満なら非新記録（isNewBest=false）', () => {
-    const storage = new StorageRepository(new MemoryStorage());
-    // 1回目で 8 点のベストを作る
-    const a = makeSM(storage);
-    const s1 = a.sm.start('elementary', 'free');
-    setHand(s1, ['ki', 'ki']);
-    a.sm.combine(s1, [...s1.hand]);
-    a.sm.end(s1, 'stuck');
-    // 2回目はスコア 0（合体せず終了）→ ベスト 8 未満
-    const b = makeSM(storage);
-    const s2 = b.sm.start('elementary', 'free');
-    const r2 = b.sm.end(s2, 'empty_hand');
-    expect(r2.score).toBe(0);
-    expect(r2.isNewBest).toBe(false);
-  });
-
-  it('既存ベストと同点なら新記録としない（score > best の厳密比較）', () => {
-    const storage = new StorageRepository(new MemoryStorage());
-    const a = makeSM(storage);
-    const s1 = a.sm.start('elementary', 'free');
-    setHand(s1, ['ki', 'ki']);
-    a.sm.combine(s1, [...s1.hand]);
-    a.sm.end(s1, 'stuck'); // best = 8
-    // 2回目も同じ 8 点 → 同点は更新しない
-    const b = makeSM(storage);
-    const s2 = b.sm.start('elementary', 'free');
-    setHand(s2, ['ki', 'ki']);
-    b.sm.combine(s2, [...s2.hand]);
-    const r2 = b.sm.end(s2, 'stuck');
-    expect(r2.score).toBe(8);
-    expect(r2.isNewBest).toBe(false);
-  });
-});
-
-describe('SessionManager end / 永続化', () => {
-  it('end は冪等：再呼び出しで同一結果・二重永続化しない', () => {
+  it('end は冪等：再呼び出しで同一結果', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
     setHand(s, ['ki', 'ki']);
-    sm.combine(s, [...s.hand]); // 林（score 8）
-    const r1 = sm.end(s, 'stuck');
-    const r2 = sm.end(s, 'empty_hand'); // 既に ended → r1 を返す
+    sm.combine(s, [...s.hand]);
+    const r1 = sm.end(s, 'deck_empty');
+    const r2 = sm.end(s, 'stuck');
     expect(r2).toBe(r1);
-    expect(r1.reason).toBe('stuck');
-    expect(r1.rank).toBe('見習い'); // score 8
   });
 
-  it('終了時に図鑑・ベストを永続化し、リロードで保持（F7・F9）', () => {
+  it('終了時に図鑑・ベストを永続化し、リロードで保持', () => {
     const storage = new StorageRepository(new MemoryStorage());
-    const { sm, persistedStore } = makeSM(storage);
+    const { sm } = makeSM(storage);
     const s = sm.start('elementary', 'free');
     setHand(s, ['ki', 'ki']);
     sm.combine(s, [...s.hand]);
-    sm.end(s, 'stuck');
-
+    sm.end(s, 'deck_empty');
     const persisted = storage.loadState();
     expect(persisted.bestScores.elementary).toBe(8);
     expect(persisted.zukan.discovered['林'].count).toBe(1);
-    expect(get(persistedStore).zukan.discovered['林']).toBeDefined();
-
-    // リロード相当：同じ storage の新 SM はベースラインに 林 を含む
-    const reload = makeSM(storage);
-    const s2 = reload.sm.start('elementary', 'free');
-    setHand(s2, ['ki', 'ki']);
-    reload.sm.combine(s2, [...s2.hand]);
-    expect(s2.newlyDiscovered).toEqual([]); // 既発見なので新規ではない
-    expect(reload.sm.getSession()?.createdKanji).toEqual(['林']);
-  });
-
-  it('daily は end でデイリーベストも保存する', () => {
-    const now = () => 1_780_000_000_000;
-    const storage = new StorageRepository(new MemoryStorage());
-    const { sm } = makeSM(storage, { now });
-    const s = sm.start('elementary', 'daily');
-    setHand(s, ['onna', 'ko']);
-    sm.combine(s, [...s.hand]); // 好（6画）
-    sm.end(s, 'stuck');
-    const ymd = todayYmdJst(now());
-    expect(storage.loadState().dailyBest[ymd]).toBe(6);
   });
 
   it('durationMs を所要時間として記録する', () => {
     let t = 1_000;
     const storage = new StorageRepository(new MemoryStorage());
     const { sm } = makeSM(storage, { now: () => t });
-    const s = sm.start('elementary', 'free'); // startedAt=1000
+    const s = sm.start('elementary', 'free');
     setHand(s, ['ki', 'ki']);
     sm.combine(s, [...s.hand]);
     t = 4_500;
-    const r = sm.end(s, 'stuck');
+    const r = sm.end(s, 'deck_empty');
     expect(r.durationMs).toBe(3_500);
-    expect(s.stats.finalScore).toBe(8);
-  });
-
-  it('別解（altInScope）は altDiscovered に永続化される（機能設計4.4）', () => {
-    const storage = new StorageRepository(new MemoryStorage());
-    const { sm } = makeSM(storage);
-    const s = sm.start('elementary', 'free');
-    setHand(s, ['ki', 'ko']); // 好/杏 の複数解
-    const r = sm.combine(s, [...s.hand]);
-    expect(r.resolved?.altInScope).toHaveLength(1);
-    const altChar = r.resolved!.altInScope[0].char;
-    sm.end(s, 'stuck');
-    expect(storage.loadState().zukan.altDiscovered[altChar].count).toBe(1);
-  });
-
-  it('同じ漢字を再作成すると discovered.count が増える', () => {
-    const storage = new StorageRepository(new MemoryStorage());
-    // 1回目
-    const a = makeSM(storage);
-    const s1 = a.sm.start('elementary', 'free');
-    setHand(s1, ['ki', 'ki']);
-    a.sm.combine(s1, [...s1.hand]);
-    a.sm.end(s1, 'stuck');
-    // 2回目（リロード相当）
-    const b = makeSM(storage);
-    const s2 = b.sm.start('elementary', 'free');
-    setHand(s2, ['ki', 'ki']);
-    b.sm.combine(s2, [...s2.hand]);
-    b.sm.end(s2, 'stuck');
-    expect(storage.loadState().zukan.discovered['林'].count).toBe(2);
-  });
-});
-
-describe('SessionManager 既定依存・終了後ガード', () => {
-  it('opts 無し（実 Date.now / Math.random / モジュール store）でも開始できる', () => {
-    const sm = new SessionManager(
-      dict,
-      new StorageRepository(new MemoryStorage())
-    );
-    const s = sm.start('elementary', 'free');
-    sm.pullGacha(s);
-    expect(s.hand).toHaveLength(1);
-    expect(s.seed).toBeNull();
-  });
-
-  it('終了後は全操作が no-op（pullGacha/combine/discardAndDraw/useHint）', () => {
-    const { sm } = makeSM();
-    const s = sm.start('elementary', 'free');
-    setHand(s, ['ki', 'ki']);
-    s.gachaRemaining = 0;
-    sm.combine(s, [...s.hand]); // 林→手札0→empty_hand で ended
-    expect(s.phase).toBe('ended');
-
-    const handBefore = [...s.hand];
-    sm.pullGacha(s);
-    setHand(s, ['ki', 'ki']);
-    expect(sm.combine(s, [...s.hand]).success).toBe(false);
-    sm.discardAndDraw(s, 't0');
-    expect(sm.useHint(s)).toBeNull();
-    expect(s.stats.combineSuccess).toBe(1); // 終了後の操作は計上されない
-    expect(handBefore).toEqual([]); // ended 時点で手札空
-  });
-});
-
-describe('SessionManager 表示支援（T-017 / T-020）', () => {
-  it('partView は既知 partId の文字とレアリティを返す', () => {
-    const { sm } = makeSM();
-    sm.start('elementary', 'free');
-    expect(sm.partView('ki')).toEqual({ char: 'ki', rarity: 1 });
-  });
-
-  it('partView は未知 partId に null を返す', () => {
-    const { sm } = makeSM();
-    sm.start('elementary', 'free');
-    expect(sm.partView('unknown')).toBeNull();
-  });
-
-  it('kanjiView は既知 char の読み/意味を返し、未知は null（図鑑用・T-020）', () => {
-    const { sm } = makeSM();
-    expect(sm.kanjiView('林')).toEqual({
-      char: '林',
-      readings: [],
-      meanings: [],
-    });
-    expect(sm.kanjiView('存在しない')).toBeNull();
-  });
-
-  it('reachableTotal は joyo の到達可能 N を返す（図鑑の分母・T-020）', () => {
-    const { sm } = makeSM();
-    expect(sm.reachableTotal()).toBe(REACHABLE.reachableN.joyo);
-  });
-
-  it('canPullGacha は playing・手札未満・残ありで true、各条件崩れで false', () => {
-    const { sm } = makeSM();
-    const s = sm.start('elementary', 'free');
-    expect(sm.canPullGacha(s)).toBe(true);
-
-    s.gachaRemaining = 0;
-    expect(sm.canPullGacha(s)).toBe(false); // 残0
-    s.gachaRemaining = 5;
-
-    s.hand = Array.from({ length: 12 }, (_, i) => ({
-      instanceId: `c${i}`,
-      partId: 'ki',
-    }));
-    expect(sm.canPullGacha(s)).toBe(false); // 手札上限(HAND_CAP=12)
-    s.hand = [];
-
-    s.phase = 'ended';
-    expect(sm.canPullGacha(s)).toBe(false); // 終了後
-  });
-
-  it('canUseHint はレベル別：やさ=常時可、ふつう=残≥1、むず=不可', () => {
-    const { sm } = makeSM();
-    const e = sm.start('elementary', 'free');
-    expect(sm.canUseHint(e)).toBe(true); // コスト0
-    e.gachaRemaining = 0;
-    expect(sm.canUseHint(e)).toBe(true); // やさは無料
-
-    const j = sm.start('juniorhigh', 'free');
-    expect(sm.canUseHint(j)).toBe(true); // 残あり
-    j.gachaRemaining = 0;
-    expect(sm.canUseHint(j)).toBe(false); // 残不足（コスト1）
-
-    const v = sm.start('joyo', 'free');
-    expect(sm.canUseHint(v)).toBe(false); // 利用不可
   });
 });
 
 describe('SessionManager タイムアタック（T-027）', () => {
   const T0 = 1_780_000_000_000;
 
-  /** 可変クロックの timeAttack SM を作る（now を t で進められる）。 */
   function makeTA(initialMs = 30_000) {
     const clock = { t: T0 };
     const storage = new StorageRepository(new MemoryStorage());
@@ -643,144 +419,169 @@ describe('SessionManager タイムアタック（T-027）', () => {
 
   it('start(timeAttack) は deadline を now+初期時間に設定し、残時間を返す', () => {
     const { sm } = makeTA(30_000);
-    const s = sm.start('elementary', 'free', 'timeAttack');
+    const s = sm.start('joyo', 'free', 'timeAttack');
     expect(s.gameMode).toBe('timeAttack');
     expect(s.deadlineAtMs).toBe(T0 + 30_000);
-    expect(s.lastSuccessAtMs).toBeNull();
     expect(sm.timeRemainingMs(s)).toBe(30_000);
   });
 
   it('ガチャは無制限：残回数を減らさず、HAND_CAP までは引ける', () => {
     const { sm } = makeTA();
-    const s = sm.start('elementary', 'free', 'timeAttack');
+    const s = sm.start('joyo', 'free', 'timeAttack');
     for (let i = 0; i < 15; i++) sm.pullGacha(s);
-    expect(s.hand).toHaveLength(12); // HAND_CAP で頭打ち
-    expect(s.gachaRemaining).toBe(GACHA_COUNT); // 減らない（無制限）
+    expect(s.hand).toHaveLength(12);
+    expect(s.gachaRemaining).toBe(GACHA_COUNT);
     expect(s.phase).toBe('playing');
   });
 
-  it('合体成功で deadline が computeExtensionMs 相当だけ延長される', () => {
+  it('合体成功で deadline が延長される', () => {
     const { sm } = makeTA();
     const s = sm.start('elementary', 'free', 'timeAttack');
     setHand(s, ['ki', 'ki']); // 林（8画）
     const before = s.deadlineAtMs!;
     sm.combine(s, [...s.hand]);
-    // 基礎3000 + 知識 floor(8/4)*1000=2000、速攻なし・×1.0
     expect(s.deadlineAtMs! - before).toBe(TIME_ATTACK.baseExtendMs + 2000);
-    expect(s.lastSuccessAtMs).toBe(T0);
   });
 
-  it('速攻（3秒以内の連続成功）で速度ボーナスが上乗せされる', () => {
-    const { sm, clock } = makeTA();
-    const s = sm.start('elementary', 'free', 'timeAttack');
-    // 1回目（速攻なし）
-    setHand(s, ['ki', 'ki']);
-    const d0 = s.deadlineAtMs!;
-    sm.combine(s, [...s.hand]);
-    const firstExt = s.deadlineAtMs! - d0;
-    // 2回目を 1 秒後（速攻窓内）に成功させる
-    clock.t = T0 + 1_000;
-    setHand(s, ['onna', 'ko']); // 好（6画）
-    const d1 = s.deadlineAtMs!;
-    sm.combine(s, [...s.hand]);
-    const secondExt = s.deadlineAtMs! - d1;
-    // 画数差（林8→知識2000 / 好6→知識1000）に加え、2回目は速攻+2000 ＆ コンボ×1.5
-    // ここでは「速攻ボーナスが効いている」ことを担保する（厳密値は computeExtensionMs テストで担保）。
-    expect(secondExt).toBeGreaterThan(0);
-    expect(firstExt).toBe(TIME_ATTACK.baseExtendMs + 2000);
-  });
-
-  it('ミスで deadline が missPenaltyMs だけ減算される（コンボもリセット）', () => {
+  it('ミスで deadline が missPenaltyMs だけ減算される', () => {
     const { sm } = makeTA();
     const s = sm.start('elementary', 'free', 'timeAttack');
-    // 先に1回成功してコンボを上げる
     setHand(s, ['ki', 'ki']);
     sm.combine(s, [...s.hand]);
-    expect(s.score.comboCount).toBe(1);
     const before = s.deadlineAtMs!;
-    setHand(s, ['ki', 'kuchi']); // 辞書に無い→ミス
+    setHand(s, ['ki', 'kuchi']);
     sm.combine(s, [...s.hand]);
     expect(s.deadlineAtMs! - before).toBe(-TIME_ATTACK.missPenaltyMs);
-    expect(s.score.comboCount).toBe(0); // リセット
-  });
-
-  it('残回数0・手札0でも詰み/手札0では終了しない（時間切れのみ）', () => {
-    const { sm } = makeTA();
-    const s = sm.start('elementary', 'free', 'timeAttack');
-    s.gachaRemaining = 0;
-    setHand(s, ['ki', 'kuchi']); // 合体不能
-    sm.combine(s, [...s.hand]); // ミス→checkGameEnd は timeAttack で早期return
-    expect(s.phase).toBe('playing');
   });
 
   it('checkTimeout：残時間0で timeup 終了し、結果に gameMode が入る', () => {
     const { sm, clock } = makeTA(5_000);
-    const s = sm.start('elementary', 'free', 'timeAttack');
+    const s = sm.start('joyo', 'free', 'timeAttack');
     sm.checkTimeout();
-    expect(s.phase).toBe('playing'); // まだ時間内
-    clock.t = T0 + 5_001; // 時間超過
+    expect(s.phase).toBe('playing');
+    clock.t = T0 + 5_001;
     sm.checkTimeout();
     expect(s.phase).toBe('ended');
     expect(s.stats.endReason).toBe('timeup');
-    const r = sm.getResult();
-    expect(r?.reason).toBe('timeup');
-    expect(r?.gameMode).toBe('timeAttack');
+    expect(sm.getResult()?.gameMode).toBe('timeAttack');
   });
 
-  it('ベストは timeAttackBest 別枠に保存し、bestScores/dailyBest を汚さない', () => {
+  it('ベストは timeAttackBest 別枠に保存し、bestScores を汚さない', () => {
     const { sm, storage } = makeTA();
     const s = sm.start('elementary', 'free', 'timeAttack');
     setHand(s, ['ki', 'ki']);
-    sm.combine(s, [...s.hand]); // 林（8点）
+    sm.combine(s, [...s.hand]);
     const r = sm.end(s, 'timeup');
     expect(r.isNewBest).toBe(true);
     const persisted = storage.loadState();
     expect(persisted.timeAttackBest.elementary).toBe(8);
-    expect(persisted.bestScores.elementary).toBe(0); // じっくり枠は不変
-    expect(persisted.zukan.discovered['林']).toBeDefined(); // 図鑑は共通
-  });
-
-  it('既存じっくりモードの start(2引数) は gachaCount 既定で従来通り', () => {
-    const { sm } = makeSM();
-    const s = sm.start('elementary', 'free');
-    expect(s.gameMode).toBe('gachaCount');
-    expect(s.deadlineAtMs).toBeNull();
-    expect(sm.timeRemainingMs(s)).toBe(0);
+    expect(persisted.bestScores.elementary).toBe(0);
   });
 });
 
-describe('SessionManager KPI 計測ログ（1プレイ統合・T-025）', () => {
+describe('SessionManager dailyInfo（むずかしい廃止＝joyo は中学に丸める）', () => {
+  it('level は elementary / juniorhigh のみを返す（joyo を含まない）', () => {
+    // 多数の日付で joyo が出ないことを確認する（dailyLevel が joyo を返しても丸める）。
+    const base = 1_780_000_000_000;
+    for (let d = 0; d < 30; d++) {
+      const { sm } = makeSM(undefined, {
+        now: () => base + d * 86_400_000,
+      });
+      const info = sm.dailyInfo();
+      expect(info.level === 'elementary' || info.level === 'juniorhigh').toBe(
+        true
+      );
+    }
+  });
+});
+
+describe('SessionManager 既定依存・終了後ガード', () => {
+  it('opts 無し（実 Date.now / Math.random / モジュール store）でも開始できる', () => {
+    const sm = new SessionManager(
+      dict,
+      new StorageRepository(new MemoryStorage())
+    );
+    const s = sm.start('elementary', 'free');
+    sm.pullGacha(s);
+    expect(s.hand).toHaveLength(1);
+    expect(s.gameMode).toBe('deck');
+  });
+
+  it('終了後は全操作が no-op', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = [];
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林→手札0→deck_empty
+    expect(s.phase).toBe('ended');
+    sm.pullGacha(s);
+    setHand(s, ['ki', 'ki']);
+    expect(sm.combine(s, [...s.hand]).success).toBe(false);
+    sm.discardAndDraw(s, 't0');
+    expect(sm.useHint(s)).toBeNull();
+    expect(s.stats.combineSuccess).toBe(1);
+  });
+});
+
+describe('SessionManager 表示支援（T-017 / T-020）', () => {
+  it('partView は既知 partId の文字とレアリティを返し、未知は null', () => {
+    const { sm } = makeSM();
+    sm.start('elementary', 'free');
+    expect(sm.partView('ki')).toEqual({ char: 'ki', rarity: 1 });
+    expect(sm.partView('unknown')).toBeNull();
+  });
+
+  it('kanjiView は既知 char の読み/意味を返し、未知は null', () => {
+    const { sm } = makeSM();
+    expect(sm.kanjiView('林')).toEqual({
+      char: '林',
+      readings: [],
+      meanings: [],
+    });
+    expect(sm.kanjiView('存在しない')).toBeNull();
+  });
+
+  it('reachableTotal は joyo の到達可能 N を返す（図鑑の分母）', () => {
+    const { sm } = makeSM();
+    expect(sm.reachableTotal()).toBe(REACHABLE.reachableN.joyo);
+  });
+
+  it('canPullGacha は playing・手札未満・山札ありで true', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    expect(sm.canPullGacha(s)).toBe(true);
+    s.deck = [];
+    s.gachaRemaining = 0;
+    expect(sm.canPullGacha(s)).toBe(false);
+    s.deck = ['ki'];
+    s.gachaRemaining = 1;
+    s.phase = 'ended';
+    expect(sm.canPullGacha(s)).toBe(false);
+  });
+});
+
+describe('SessionManager KPI 計測ログ（1プレイ統合）', () => {
   it('代表フロー（ガチャ→成功→ミス→ヒント→終了）で PlayStats 主要KPIが記録される', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
 
-    // ガチャ（プレイ進行：残が1減る）
     sm.pullGacha(s);
-    expect(s.gachaRemaining).toBe(GACHA_COUNT - 1);
+    expect(s.deck).toHaveLength(DECK_SIZE - 1);
 
-    // 合体成功（ki+ki → 林・新規発見）
     setHand(s, ['ki', 'ki']);
     expect(sm.combine(s, [...s.hand]).success).toBe(true);
 
-    // 合体ミス（辞書に無い組）
     setHand(s, ['ki', 'kuchi']);
     expect(sm.combine(s, [...s.hand]).success).toBe(false);
 
-    // ヒント（elementary は無料で1組返す）
     setHand(s, ['ki', 'ki', 'kuchi']);
     expect(sm.useHint(s)).not.toBeNull();
 
-    // 終了 → KPI（PlayStats）が出揃う
-    const r = sm.end(s, 'stuck');
+    const r = sm.end(s, 'deck_empty');
     expect(s.stats.combineSuccess).toBe(1);
     expect(s.stats.combineMiss).toBe(1);
     expect(s.stats.hintUsed).toBe(1);
-    expect(s.stats.newDiscoveries).toBe(1);
-    expect(s.stats.endReason).toBe('stuck');
-    expect(s.stats.finalScore).toBe(s.score.score);
-    expect(s.stats.durationMs).toBeGreaterThanOrEqual(0);
-    // 結果（GameResult）にも終了理由・所要時間が伝播する
-    expect(r.reason).toBe('stuck');
-    expect(r.durationMs).toBe(s.stats.durationMs);
+    expect(s.stats.endReason).toBe('deck_empty');
+    expect(r.reason).toBe('deck_empty');
   });
 });

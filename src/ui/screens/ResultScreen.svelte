@@ -13,7 +13,7 @@
   const LEVEL_LABELS: Record<string, string> = {
     elementary: 'やさしい',
     juniorhigh: 'ふつう',
-    joyo: 'むずかしい',
+    joyo: '常用', // むずかしい廃止。joyo はタイムアタック（常用）の表示に使う
   };
 
   // 結果はこの画面に来た時点で確定済み（end() 済み）。マウント時に1度だけ取得する。
@@ -78,6 +78,13 @@
       <p class="mode" data-testid="result-mode">タイムアタック</p>
     {/if}
 
+    {#if result.gameMode === 'deck'}
+      <p class="collection" data-testid="collection">
+        収集 <strong>{result.completedCount}</strong> / {result.targetTotal}
+        <small>（{LEVEL_LABELS[result.level] ?? result.level}の漢字）</small>
+      </p>
+    {/if}
+
     <p class="rank">称号：<strong data-testid="rank">{result.rank}</strong></p>
     <p class="score">
       スコア <strong data-testid="result-score">{result.score}</strong>
@@ -138,6 +145,19 @@
     color: #c0392b;
     border: 1px solid #c0392b;
     border-radius: 0.8rem;
+  }
+  .collection {
+    margin: 0.25rem 0;
+    font-size: 1.05rem;
+  }
+  .collection strong {
+    font-size: 1.3rem;
+    font-variant-numeric: tabular-nums;
+    color: #2a6;
+  }
+  .collection small {
+    color: #666;
+    font-size: 0.8rem;
   }
   .rank,
   .score {
