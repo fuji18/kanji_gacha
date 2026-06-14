@@ -4,6 +4,7 @@
   import { sessionStore } from '../../app/stores/sessionStore';
   import { navigate } from '../../app/stores/routeStore';
   import ScoreBar from '../components/ScoreBar.svelte';
+  import TimeBar from '../components/TimeBar.svelte';
   import HandView from '../components/HandView.svelte';
   import GachaButton from '../components/GachaButton.svelte';
   import HintButton from '../components/HintButton.svelte';
@@ -23,6 +24,24 @@
   let selectedIds = $state<string[]>([]);
   let hintedIds = $state<string[]>([]);
   let feedback = $state('');
+
+  // ---- タイムアタック（T-027）。残時間はUIのティッカーで実時刻から算出し、0で終了判定する ----
+  const isTimeAttack = $derived(view?.gameMode === 'timeAttack');
+  // sessionManager は不変の prop。初期値参照で問題ない（残時間バーの満タン基準）。
+  // svelte-ignore state_referenced_locally
+  const taTotalMs = sessionManager.timeAttackTotalMs();
+  let timeRemainingMs = $state(0);
+  let tickTimer: ReturnType<typeof setInterval> | null = null;
+
+  // 100ms 間隔で残時間を更新し、0以下なら時間切れ終了を要求する（ended→下部の $effect で result 遷移）。
+  function tick(): void {
+    const s = sessionManager.getSession();
+    if (!s || s.gameMode !== 'timeAttack') return;
+    timeRemainingMs = sessionManager.timeRemainingMs(s);
+    if (s.phase === 'playing' && timeRemainingMs <= 0) {
+      sessionManager.checkTimeout();
+    }
+  }
 
   // ---- 演出（T-018）。Canvas は独自 rAF ループで描画し、判定をブロックしない ----
   const reducedMotion =
@@ -49,10 +68,14 @@
       field = new ParticleField(ctx, { reducedMotion });
       field.start();
     }
+    // タイムアタックの残時間ティッカー。timeAttack 以外では tick() が即 return するため無害。
+    tick();
+    tickTimer = setInterval(tick, 100);
   });
   onDestroy(() => {
     field?.stop();
     if (shakeTimer !== null) clearTimeout(shakeTimer);
+    if (tickTimer !== null) clearInterval(tickTimer);
   });
 
   // canvas のピクセルサイズを要素サイズに同期する。
@@ -189,11 +212,20 @@
     <p>ゲームが開始されていません。</p>
     <button type="button" onclick={quit}>ホームへ</button>
   {:else}
+    {#if isTimeAttack}
+      <TimeBar
+        remainingMs={timeRemainingMs}
+        initialMs={taTotalMs}
+        {reducedMotion}
+      />
+    {/if}
+
     <ScoreBar
       score={view.score.score}
       comboMultiplier={view.score.comboMultiplier}
       comboCount={view.score.comboCount}
       gachaRemaining={view.gachaRemaining}
+      showGachaRemaining={!isTimeAttack}
     />
 
     <p class="feedback" role="status" data-testid="feedback">{feedback}</p>
@@ -232,6 +264,7 @@
       <GachaButton
         remaining={view.gachaRemaining}
         disabled={!canPull}
+        showRemaining={!isTimeAttack}
         onclick={doGacha}
       />
       <button

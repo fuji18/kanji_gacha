@@ -13,6 +13,12 @@ export type Rarity = 1 | 2 | 3 | 4 | 5;
 export type Level = 'elementary' | 'juniorhigh' | 'joyo'; // やさ / ふつう / むず
 
 /**
+ * ゲーム種別（T-027・企画整理書 §11）。`mode（free/daily）` と直交する軸。
+ *  - gachaCount：ガチャ残り回数制（既存・運寄り）。残0＋詰み/手札0で終了。
+ *  - timeAttack：持ち時間制（実力寄り）。ガチャ無制限・成功で時間延長・残時間0で終了。 */
+export type GameMode = 'gachaCount' | 'timeAttack';
+
+/**
  * 合体辞書キー。構成部品idを昇順ソートして "+" 連結したマルチセット
  * （配置不問・重複可。例 ["ki","ki"] -> "ki+ki"）（機能設計3.1） */
 export type CombineKey = string;
@@ -86,7 +92,7 @@ export interface PlayStats {
   combineMiss: number; // ミス回数
   hintUsed: number; // ヒント利用回数
   discardUsed: number; // 捨てる利用回数
-  endReason: 'stuck' | 'empty_hand' | null; // 詰み / 手札0（PRD 詰み終了率の定義）
+  endReason: 'stuck' | 'empty_hand' | 'timeup' | null; // 詰み / 手札0 / 時間切れ（PRD 詰み終了率・T-027）
   finalScore: number;
   newDiscoveries: number;
   durationMs: number;
@@ -96,8 +102,13 @@ export interface PlayStats {
 export interface GameSession {
   level: Level;
   mode: 'free' | 'daily';
+  gameMode: GameMode; // ガチャ回数制 / タイムアタック（T-027）
   seed: number | null; // daily は dailySeed の整数値（機能設計4.6）。free は null
-  gachaRemaining: number; // 残りガチャ回数（初期 GACHA_COUNT・暫定）
+  gachaRemaining: number; // 残りガチャ回数（初期 GACHA_COUNT・暫定。timeAttack では未使用）
+  // タイムアタック専用。終了予定の絶対時刻（epoch ms）。gachaCount では null。
+  deadlineAtMs: number | null;
+  // タイムアタックの速攻ボーナス判定用。直近の合体成功時刻（epoch ms）。未成功は null。
+  lastSuccessAtMs: number | null;
   hand: HandPart[]; // 手札（上限 HAND_CAP・暫定）
   score: ScoreState;
   createdKanji: string[]; // このセッションで作った漢字（重複可）
@@ -113,13 +124,14 @@ export interface GameSession {
 export interface GameResult {
   level: Level;
   mode: 'free' | 'daily';
+  gameMode: GameMode; // ガチャ回数制 / タイムアタック（再挑戦・ベスト表示用・T-027）
   score: number; // 最終スコア
   rank: string; // 称号（resolveRank の結果）
   createdKanji: string[]; // 作成漢字一覧（重複可・シェアの代表選定にも使う）
   newlyDiscovered: string[]; // 今回新規に図鑑追加された漢字
-  reason: 'stuck' | 'empty_hand'; // 終了理由（KPI と一致）
+  reason: 'stuck' | 'empty_hand' | 'timeup'; // 終了理由（KPI と一致）
   durationMs: number; // 所要時間
-  isNewBest: boolean; // 今回スコアがレベル別ベストを更新したか（新記録明示・PRD F9）
+  isNewBest: boolean; // 今回スコアがモード別ベストを更新したか（新記録明示・PRD F9）
 }
 
 // ===== 永続データ（localStorage・機能設計3.3） =====
@@ -140,7 +152,8 @@ export interface Settings {
 /** localStorage に永続化する全体状態 */
 export interface PersistedState {
   zukan: ZukanState;
-  bestScores: Record<Level, number>; // レベル別ベスト
+  bestScores: Record<Level, number>; // レベル別ベスト（じっくりモード）
+  timeAttackBest: Record<Level, number>; // レベル別ベスト（タイムアタック・別枠・T-027）
   dailyBest: Record<string /* YYYYMMDD */, number>;
   settings: Settings;
   schemaVersion: number; // マイグレーション用（現行=1）

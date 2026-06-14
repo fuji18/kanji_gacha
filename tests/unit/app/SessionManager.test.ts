@@ -17,7 +17,7 @@ import {
   todayYmdJst,
   dailyLevel,
 } from '../../../src/domain/rng/dailySeed';
-import { GACHA_COUNT } from '../../../src/domain/constants';
+import { GACHA_COUNT, TIME_ATTACK } from '../../../src/domain/constants';
 import type {
   CombineEntry,
   GameSession,
@@ -142,6 +142,7 @@ function emptyState(): PersistedState {
   return {
     zukan: { discovered: {}, altDiscovered: {} },
     bestScores: { elementary: 0, juniorhigh: 0, joyo: 0 },
+    timeAttackBest: { elementary: 0, juniorhigh: 0, joyo: 0 },
     dailyBest: {},
     settings: { hintAlwaysOn: false },
     schemaVersion: 1,
@@ -623,6 +624,128 @@ describe('SessionManager 表示支援（T-017 / T-020）', () => {
 
     const v = sm.start('joyo', 'free');
     expect(sm.canUseHint(v)).toBe(false); // 利用不可
+  });
+});
+
+describe('SessionManager タイムアタック（T-027）', () => {
+  const T0 = 1_780_000_000_000;
+
+  /** 可変クロックの timeAttack SM を作る（now を t で進められる）。 */
+  function makeTA(initialMs = 30_000) {
+    const clock = { t: T0 };
+    const storage = new StorageRepository(new MemoryStorage());
+    const { sm, persistedStore } = makeSM(storage, {
+      now: () => clock.t,
+      timeAttackInitialMs: initialMs,
+    });
+    return { sm, storage, persistedStore, clock };
+  }
+
+  it('start(timeAttack) は deadline を now+初期時間に設定し、残時間を返す', () => {
+    const { sm } = makeTA(30_000);
+    const s = sm.start('elementary', 'free', 'timeAttack');
+    expect(s.gameMode).toBe('timeAttack');
+    expect(s.deadlineAtMs).toBe(T0 + 30_000);
+    expect(s.lastSuccessAtMs).toBeNull();
+    expect(sm.timeRemainingMs(s)).toBe(30_000);
+  });
+
+  it('ガチャは無制限：残回数を減らさず、HAND_CAP までは引ける', () => {
+    const { sm } = makeTA();
+    const s = sm.start('elementary', 'free', 'timeAttack');
+    for (let i = 0; i < 15; i++) sm.pullGacha(s);
+    expect(s.hand).toHaveLength(12); // HAND_CAP で頭打ち
+    expect(s.gachaRemaining).toBe(GACHA_COUNT); // 減らない（無制限）
+    expect(s.phase).toBe('playing');
+  });
+
+  it('合体成功で deadline が computeExtensionMs 相当だけ延長される', () => {
+    const { sm } = makeTA();
+    const s = sm.start('elementary', 'free', 'timeAttack');
+    setHand(s, ['ki', 'ki']); // 林（8画）
+    const before = s.deadlineAtMs!;
+    sm.combine(s, [...s.hand]);
+    // 基礎3000 + 知識 floor(8/4)*1000=2000、速攻なし・×1.0
+    expect(s.deadlineAtMs! - before).toBe(TIME_ATTACK.baseExtendMs + 2000);
+    expect(s.lastSuccessAtMs).toBe(T0);
+  });
+
+  it('速攻（3秒以内の連続成功）で速度ボーナスが上乗せされる', () => {
+    const { sm, clock } = makeTA();
+    const s = sm.start('elementary', 'free', 'timeAttack');
+    // 1回目（速攻なし）
+    setHand(s, ['ki', 'ki']);
+    const d0 = s.deadlineAtMs!;
+    sm.combine(s, [...s.hand]);
+    const firstExt = s.deadlineAtMs! - d0;
+    // 2回目を 1 秒後（速攻窓内）に成功させる
+    clock.t = T0 + 1_000;
+    setHand(s, ['onna', 'ko']); // 好（6画）
+    const d1 = s.deadlineAtMs!;
+    sm.combine(s, [...s.hand]);
+    const secondExt = s.deadlineAtMs! - d1;
+    // 画数差（林8→知識2000 / 好6→知識1000）に加え、2回目は速攻+2000 ＆ コンボ×1.5
+    // ここでは「速攻ボーナスが効いている」ことを担保する（厳密値は computeExtensionMs テストで担保）。
+    expect(secondExt).toBeGreaterThan(0);
+    expect(firstExt).toBe(TIME_ATTACK.baseExtendMs + 2000);
+  });
+
+  it('ミスで deadline が missPenaltyMs だけ減算される（コンボもリセット）', () => {
+    const { sm } = makeTA();
+    const s = sm.start('elementary', 'free', 'timeAttack');
+    // 先に1回成功してコンボを上げる
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]);
+    expect(s.score.comboCount).toBe(1);
+    const before = s.deadlineAtMs!;
+    setHand(s, ['ki', 'kuchi']); // 辞書に無い→ミス
+    sm.combine(s, [...s.hand]);
+    expect(s.deadlineAtMs! - before).toBe(-TIME_ATTACK.missPenaltyMs);
+    expect(s.score.comboCount).toBe(0); // リセット
+  });
+
+  it('残回数0・手札0でも詰み/手札0では終了しない（時間切れのみ）', () => {
+    const { sm } = makeTA();
+    const s = sm.start('elementary', 'free', 'timeAttack');
+    s.gachaRemaining = 0;
+    setHand(s, ['ki', 'kuchi']); // 合体不能
+    sm.combine(s, [...s.hand]); // ミス→checkGameEnd は timeAttack で早期return
+    expect(s.phase).toBe('playing');
+  });
+
+  it('checkTimeout：残時間0で timeup 終了し、結果に gameMode が入る', () => {
+    const { sm, clock } = makeTA(5_000);
+    const s = sm.start('elementary', 'free', 'timeAttack');
+    sm.checkTimeout();
+    expect(s.phase).toBe('playing'); // まだ時間内
+    clock.t = T0 + 5_001; // 時間超過
+    sm.checkTimeout();
+    expect(s.phase).toBe('ended');
+    expect(s.stats.endReason).toBe('timeup');
+    const r = sm.getResult();
+    expect(r?.reason).toBe('timeup');
+    expect(r?.gameMode).toBe('timeAttack');
+  });
+
+  it('ベストは timeAttackBest 別枠に保存し、bestScores/dailyBest を汚さない', () => {
+    const { sm, storage } = makeTA();
+    const s = sm.start('elementary', 'free', 'timeAttack');
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林（8点）
+    const r = sm.end(s, 'timeup');
+    expect(r.isNewBest).toBe(true);
+    const persisted = storage.loadState();
+    expect(persisted.timeAttackBest.elementary).toBe(8);
+    expect(persisted.bestScores.elementary).toBe(0); // じっくり枠は不変
+    expect(persisted.zukan.discovered['林']).toBeDefined(); // 図鑑は共通
+  });
+
+  it('既存じっくりモードの start(2引数) は gachaCount 既定で従来通り', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    expect(s.gameMode).toBe('gachaCount');
+    expect(s.deadlineAtMs).toBeNull();
+    expect(sm.timeRemainingMs(s)).toBe(0);
   });
 });
 

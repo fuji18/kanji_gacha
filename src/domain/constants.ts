@@ -57,3 +57,21 @@ export const DISCARD_COST: Record<Level, number> = {
   juniorhigh: 1, // ふつう：ガチャ残 -1
   joyo: 2, // むずかしい：ガチャ残 -2
 };
+
+/**
+ * タイムアタックモードの時間収支パラメータ（暫定・要調整 T-027／企画整理書 §11）。
+ * 延長秒 = (baseExtendMs + 知識 + 速度) × コンボ倍率。すべて ms 単位。
+ *  - 知識 = floor(画数 / strokesDivisorSec) 秒 ＋（partCount≥multiPartThreshold で multiPartBonusMs）
+ *  - 速度 = 前回成功から speedWindowMs 以内の連続正解で speedBonusMs
+ *  - ミス = missPenaltyMs を減算（コンボリセットは既存ロジック）
+ * 上限は設けない（雪だるま式の伸びを優先）。 */
+export const TIME_ATTACK = {
+  initialMs: 30_000, // 初期持ち時間（30秒）
+  baseExtendMs: 3_000, // 成功時の基礎延長（3秒）
+  strokesDivisorSec: 4, // 知識ボーナス＝floor(画数/4) 秒
+  multiPartThreshold: 3, // この部品数以上で多部品ボーナス
+  multiPartBonusMs: 2_000, // 多部品ボーナス（+2秒）
+  speedWindowMs: 3_000, // 速攻判定の連続成功間隔（3秒以内）
+  speedBonusMs: 2_000, // 速攻ボーナス（+2秒）
+  missPenaltyMs: 2_000, // ミス時の減算（-2秒）
+} as const;

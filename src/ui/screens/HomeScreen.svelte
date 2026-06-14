@@ -35,6 +35,12 @@
     sessionManager.start(daily.level, 'daily');
     navigate('game');
   }
+
+  // タイムアタック（T-027）。実力（速度・知識・連続性）で持ち時間を延ばす別モード。free RNG で開始する。
+  function startTimeAttack(level: LevelId): void {
+    sessionManager.start(level, 'free', 'timeAttack');
+    navigate('game');
+  }
 </script>
 
 <section class="screen home">
@@ -69,6 +75,28 @@
     <span class="daily-level">{dailyLabel}</span>
     <span class="daily-best">ベスト {dailyBest}</span>
   </button>
+
+  <section class="ta-section">
+    <h3 class="ta-title">タイムアタック</h3>
+    <p class="ta-lead">制限時間制。正解すると時間が延びる実力勝負モード。</p>
+    <ul class="ta-levels">
+      {#each LEVELS as lv (lv.id)}
+        <li>
+          <button
+            type="button"
+            class="ta"
+            onclick={() => startTimeAttack(lv.id)}
+            aria-label={`${lv.label}でタイムアタック開始`}
+          >
+            <span class="ta-label">{lv.label}</span>
+            <span class="ta-best"
+              >ベスト {$persistedStore.timeAttackBest[lv.id]}</span
+            >
+          </button>
+        </li>
+      {/each}
+    </ul>
+  </section>
 
   <nav class="actions">
     <button type="button" onclick={() => navigate('zukan')}>図鑑</button>
@@ -128,6 +156,45 @@
     color: #555;
   }
   .daily-best {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: #333;
+  }
+  .ta-section {
+    margin: 1.5rem 0 0;
+  }
+  .ta-title {
+    font-size: 1rem;
+    margin: 0 0 0.2rem;
+  }
+  .ta-lead {
+    font-size: 0.82rem;
+    color: #555;
+    margin: 0 0 0.6rem;
+  }
+  .ta-levels {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .ta {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1.1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    text-align: left;
+  }
+  .ta-label {
+    font-weight: 700;
+  }
+  .ta-best {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     color: #333;

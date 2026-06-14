@@ -24,6 +24,7 @@ export function defaultState(): PersistedState {
   return {
     zukan: { discovered: {}, altDiscovered: {} },
     bestScores: { elementary: 0, juniorhigh: 0, joyo: 0 },
+    timeAttackBest: { elementary: 0, juniorhigh: 0, joyo: 0 },
     dailyBest: {},
     settings: { hintAlwaysOn: false },
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -55,6 +56,11 @@ export function migrate(parsed: unknown): PersistedState {
   return {
     zukan: normalizeZukan(parsed.zukan),
     bestScores: normalizeBestScores(parsed.bestScores, base.bestScores),
+    // T-027：旧データ（timeAttackBest 無し）は base の {0,0,0} で補完される（後方互換・版上げ不要）。
+    timeAttackBest: normalizeBestScores(
+      parsed.timeAttackBest,
+      base.timeAttackBest
+    ),
     dailyBest: normalizeNumberMap(parsed.dailyBest),
     settings: normalizeSettings(parsed.settings, base.settings),
     // 「常に最新スキーマを返す」契約に従い、未知の将来版も含め常に現行版へ確定する
