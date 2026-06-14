@@ -1,0 +1,78 @@
+/*
+ * Material Design 3 デザイントークン × 和風パレット（T: 和風Material UIリファクタ）。
+ * 全画面はこの CSS 変数のみを参照する。Google Fonts 等の外部CDNは使わず（CSP default-src 'self'）、
+ * 筆文字は見出し・ボタン用に subset を自前ホストする。
+ */
+
+/* 見出し・ボタン用の筆文字（Yuji Syuku サブセット・OFL 1.1）。src 相対参照で Vite が
+   ハッシュ付与・base path 解決・PWA プリキャッシュ（globPatterns）を担う。 */
+@font-face {
+  font-family: 'KG Yuji Syuku UI';
+  src: url('./fonts/yuji-syuku-ui.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ===== カラー（和風 → Material ロール） ===== */
+  --md-sys-color-primary: #c0392b; /* 朱 */
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #f6dedb;
+  --md-sys-color-on-primary-container: #4a0e08;
+
+  --md-sys-color-secondary: #2c3e6b; /* 藍 */
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #dde3f3;
+  --md-sys-color-on-secondary-container: #0e1a3a;
+
+  --md-sys-color-tertiary: #b8860b; /* 金（濃いめ・テキスト可読） */
+  --md-sys-color-tertiary-bright: #d4af37; /* 金（装飾用） */
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #f6eccf;
+  --md-sys-color-on-tertiary-container: #4a3a05;
+
+  --md-sys-color-surface: #f5f1e6; /* 和紙 */
+  --md-sys-color-on-surface: #2b2b2b; /* 墨 */
+  --md-sys-color-surface-container-low: #f0ebdc;
+  --md-sys-color-surface-container: #eae2cf;
+  --md-sys-color-surface-container-high: #e6dcc4;
+  --md-sys-color-on-surface-variant: #5c5645;
+
+  --md-sys-color-outline: #8a8268;
+  --md-sys-color-outline-variant: #d6cdb4;
+  --md-sys-color-error: #b3261e;
+
+  /* ===== 形状（角丸） ===== */
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-full: 999px;
+
+  /* ===== エレベーション ===== */
+  --md-sys-elevation-1:
+    0 1px 2px rgba(43, 43, 43, 0.18), 0 1px 3px rgba(43, 43, 43, 0.1);
+  --md-sys-elevation-2:
+    0 2px 4px rgba(43, 43, 43, 0.2), 0 1px 6px rgba(43, 43, 43, 0.12);
+  --md-sys-elevation-3:
+    0 4px 8px rgba(43, 43, 43, 0.22), 0 2px 12px rgba(43, 43, 43, 0.14);
+
+  /* ===== 書体 ===== */
+  /* 動的な漢字パーツ用のブラシ感（明朝系システムフォント）。 */
+  --md-ref-typeface-kanji:
+    'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'Noto Serif JP', serif;
+  /* 見出し・ボタン用の自前ホスト筆文字＋明朝フォールバック。 */
+  --md-ref-typeface-brand:
+    'KG Yuji Syuku UI', 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP',
+    serif;
+  /* 本文・UIテキスト用のサンセリフ。 */
+  --md-ref-typeface-plain:
+    system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+
+  /* ===== タイプスケール（Material 3） ===== */
+  --md-sys-typescale-display-size: 2.25rem;
+  --md-sys-typescale-headline-size: 1.5rem;
+  --md-sys-typescale-title-size: 1.125rem;
+  --md-sys-typescale-body-size: 0.95rem;
+  --md-sys-typescale-label-size: 0.75rem;
+}

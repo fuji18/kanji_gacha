@@ -15,7 +15,9 @@ export default defineConfig({
       workbox: {
         // 静的アセットに加え、ランタイムで fetch する辞書JSON（kanji/parts/combine/reachable）と
         // LICENSE.txt をプリキャッシュ対象に含める。これによりオフライン時も /data/*.json を供給できる。
-        globPatterns: ['**/*.{js,css,html,json,txt,svg,ico,png,webmanifest}'],
+        globPatterns: [
+          '**/*.{js,css,html,json,txt,svg,ico,png,webmanifest,woff2}',
+        ],
         // SPA：未キャッシュのナビゲーションは index.html にフォールバック（オフラインでもルート表示）。
         navigateFallback: 'index.html',
       },

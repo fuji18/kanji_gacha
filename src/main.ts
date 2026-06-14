@@ -1,4 +1,5 @@
 import { mount, unmount } from 'svelte';
+import './ui/styles/material-tokens.css';
 import App from './App.svelte';
 import LoadingView from './ui/components/LoadingView.svelte';
 import ErrorView from './ui/components/ErrorView.svelte';

@@ -49,28 +49,30 @@
   .track {
     flex: 1;
     height: 0.7rem;
-    background: #eee;
-    border-radius: 0.35rem;
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-full);
     overflow: hidden;
   }
   .fill {
     height: 100%;
-    background: #2a6;
+    background: var(--md-sys-color-secondary);
     transition: width 0.15s linear;
   }
   .timebar.low .fill {
-    background: #c0392b;
+    background: var(--md-sys-color-primary);
   }
   .label {
     min-width: 2.2rem;
     text-align: right;
-    font-size: 1.2rem;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-headline-size);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    color: #333;
+    color: var(--md-sys-color-on-surface);
   }
   .timebar.low .label {
-    color: #c0392b;
+    color: var(--md-sys-color-primary);
   }
   .fill.pulse {
     animation: kg-time-pulse 0.8s ease-in-out infinite;
