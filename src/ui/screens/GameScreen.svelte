@@ -8,6 +8,9 @@
   import HandView from '../components/HandView.svelte';
   import GachaButton from '../components/GachaButton.svelte';
   import HintButton from '../components/HintButton.svelte';
+  import MaterialButton from '../components/MaterialButton.svelte';
+  import EmakimonoReveal from '../components/EmakimonoReveal.svelte';
+  import { RARITY_LABELS } from '../labels/rarityLabels';
   import { ParticleField } from '../effects/particleField';
   import '../effects/effects.css';
 
@@ -62,6 +65,35 @@
   } | null>(null);
   let floatSeq = 0;
 
+  // ---- ガチャ獲得演出（おみくじ巻物）。装飾オーバーレイのため操作はブロックしない ----
+  let reveal = $state<{
+    char: string;
+    rarity: number;
+    rarityLabel: string;
+    key: number;
+  } | null>(null);
+  let revealSeq = 0;
+  let revealTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function clearRevealTimer(): void {
+    if (revealTimer !== null) {
+      clearTimeout(revealTimer);
+      revealTimer = null;
+    }
+  }
+
+  // 筆順描画の完了後、一定時間表示してから巻物を消す。
+  function onRevealComplete(): void {
+    clearRevealTimer();
+    revealTimer = setTimeout(
+      () => {
+        reveal = null;
+        revealTimer = null;
+      },
+      reducedMotion ? 0 : 600
+    );
+  }
+
   onMount(() => {
     const ctx = canvasEl?.getContext('2d') ?? null;
     if (ctx) {
@@ -76,6 +108,7 @@
     field?.stop();
     if (shakeTimer !== null) clearTimeout(shakeTimer);
     if (tickTimer !== null) clearInterval(tickTimer);
+    clearRevealTimer();
   });
 
   // canvas のピクセルサイズを要素サイズに同期する。
@@ -148,16 +181,32 @@
   function doGacha(): void {
     const s = sessionManager.getSession();
     if (!s) return;
+    // ガチャ前後の手札 instanceId 差分で「新しく引いた部品」を特定し、巻物演出に渡す。
+    const before = new Set(s.hand.map((h) => h.instanceId));
     sessionManager.pullGacha(s);
     selectedIds = []; // 手札が変わるので選択もリセット（他コマンドと一貫）
     hintedIds = [];
     feedback = '';
     floatInfo = null;
+
+    clearRevealTimer();
+    const added = s.hand.find((h) => !before.has(h.instanceId));
+    const part = added ? sessionManager.partView(added.partId) : null;
+    reveal = part
+      ? {
+          char: part.char,
+          rarity: part.rarity,
+          rarityLabel: RARITY_LABELS[part.rarity] ?? '',
+          key: ++revealSeq,
+        }
+      : null;
   }
 
   function doCombine(): void {
     const s = sessionManager.getSession();
     if (!s || selectedIds.length < 2) return;
+    clearRevealTimer();
+    reveal = null;
     const sel = s.hand.filter((h) => selectedIds.includes(h.instanceId));
     const result = sessionManager.combine(s, sel);
     if (result.success && result.resolved) {
@@ -188,6 +237,8 @@
   function doDiscard(): void {
     const s = sessionManager.getSession();
     if (!s || selectedIds.length !== 1) return;
+    clearRevealTimer();
+    reveal = null;
     sessionManager.discardAndDraw(s, selectedIds[0]);
     selectedIds = [];
     hintedIds = [];
@@ -253,6 +304,18 @@
           </div>
         {/key}
       {/if}
+
+      {#if reveal}
+        {#key reveal.key}
+          <EmakimonoReveal
+            char={reveal.char}
+            rarity={reveal.rarity}
+            rarityLabel={reveal.rarityLabel}
+            {reducedMotion}
+            oncomplete={onRevealComplete}
+          />
+        {/key}
+      {/if}
     </div>
 
     {#if handFull}
@@ -269,23 +332,26 @@
         remainingLabel="山札"
         onclick={doGacha}
       />
-      <button
-        type="button"
-        class="combine"
+      <MaterialButton
+        variant="filled"
+        color="primary"
+        accentRing
         disabled={!canCombine}
-        onclick={doCombine}>合体！</button
+        onclick={doCombine}>合体！</MaterialButton
       >
       <HintButton disabled={hintDisabled} onclick={doHint} />
-      <button
-        type="button"
-        class="discard"
+      <MaterialButton
+        variant="outlined"
+        color="secondary"
         disabled={!canDiscard}
-        onclick={doDiscard}>捨てて引き直す</button
+        onclick={doDiscard}>捨てて引き直す</MaterialButton
       >
     </div>
 
     <nav class="actions">
-      <button type="button" onclick={quit}>やめる</button>
+      <MaterialButton variant="outlined" color="secondary" onclick={quit}
+        >やめる</MaterialButton
+      >
     </nav>
   {/if}
 </section>
@@ -302,11 +368,18 @@
     white-space: nowrap;
     border: 0;
   }
+  .screen.game {
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    border-radius: var(--md-sys-shape-corner-large);
+    padding: 1rem;
+  }
   .feedback {
     min-height: 1.4rem;
     margin: 0 0 0.5rem;
+    font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
-    color: #2a6;
+    color: var(--md-sys-color-primary);
   }
   .fx-wrap {
     position: relative;
@@ -363,16 +436,10 @@
     justify-content: center;
     margin-top: 1rem;
   }
-  .controls button {
-    padding: 0.7rem 1.2rem;
-    font-size: 1rem;
-    cursor: pointer;
-  }
-  .controls button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-  .combine {
-    font-weight: 700;
+  /* App.svelte の :global(.screen .actions button)（特異性 0,2,1）に対し、
+     Material ボタン寸法を 0,3,0 で上書きして「やめる」の見た目を保つ。 */
+  .actions :global(.md-btn) {
+    padding: 0 20px;
+    font-size: 1.05rem;
   }
 </style>

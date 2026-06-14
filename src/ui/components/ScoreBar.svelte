@@ -1,5 +1,5 @@
 <script lang="ts">
-  // スコア・コンボ倍率・ガチャ残の常時表示（機能設計5・PRD F4・T-017）。
+  // スコア・コンボ倍率・ガチャ残の常時表示（機能設計5・PRD F4・T-017）。和風 Material 版。
   interface Props {
     score: number;
     comboMultiplier: number;
@@ -27,7 +27,7 @@
   </div>
   <div class="stat">
     <dt>コンボ</dt>
-    <dd data-testid="combo">
+    <dd class="accent" data-testid="combo">
       ×{comboMultiplier.toFixed(1)}<small>（{comboCount}）</small>
     </dd>
   </div>
@@ -46,25 +46,34 @@
     gap: 0.5rem;
     margin: 0 0 0.75rem;
     padding: 0.5rem 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 0.5rem;
+    background: var(--md-sys-color-surface-container-low);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-medium);
+    box-shadow: var(--md-sys-elevation-1);
   }
   .stat {
     text-align: center;
   }
   dt {
-    font-size: 0.75rem;
-    color: #666;
+    font-family: var(--md-ref-typeface-plain);
+    font-size: var(--md-sys-typescale-label-size);
+    color: var(--md-sys-color-on-surface-variant);
+    letter-spacing: 0.04em;
   }
   dd {
     margin: 0;
-    font-size: 1.2rem;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-headline-size);
     font-weight: 700;
+    color: var(--md-sys-color-on-surface);
     font-variant-numeric: tabular-nums;
+  }
+  dd.accent {
+    color: var(--md-sys-color-primary);
   }
   small {
     font-size: 0.7rem;
     font-weight: 400;
-    color: #666;
+    color: var(--md-sys-color-on-surface-variant);
   }
 </style>

@@ -93,37 +93,49 @@
 </section>
 
 <style>
+  .zukan h2 {
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-headline-size);
+    color: var(--md-sys-color-on-surface);
+  }
   .rate {
     margin: 0.5rem 0 1.25rem;
   }
   .rate-num {
-    font-size: 1.1rem;
+    font-size: var(--md-sys-typescale-title-size);
     margin: 0;
   }
   .rate-num strong {
-    font-size: 1.8rem;
-    color: #2a6;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-display-size);
+    font-variant-numeric: tabular-nums;
+    color: var(--md-sys-color-tertiary);
   }
   .bar {
     height: 0.6rem;
-    background: #eee;
-    border-radius: 0.3rem;
+    background: var(--md-sys-color-surface-container-high);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-full);
     overflow: hidden;
     margin: 0.4rem auto;
     max-width: 20rem;
   }
   .bar-fill {
     height: 100%;
-    background: #4caf50;
+    background: linear-gradient(
+      to right,
+      var(--md-sys-color-tertiary),
+      var(--md-sys-color-tertiary-bright)
+    );
     transition: width 0.3s ease;
   }
   .rate-note {
-    font-size: 0.8rem;
-    color: #777;
+    font-size: var(--md-sys-typescale-label-size);
+    color: var(--md-sys-color-on-surface-variant);
     margin: 0.25rem 0 0;
   }
   .empty {
-    color: #777;
+    color: var(--md-sys-color-on-surface-variant);
   }
   .grid {
     list-style: none;
@@ -134,8 +146,14 @@
     gap: 0.5rem;
   }
   .card {
-    border: 1px solid #ddd;
-    border-radius: 0.5rem;
+    background: linear-gradient(
+      160deg,
+      var(--md-sys-color-surface) 0%,
+      var(--md-sys-color-surface-container) 100%
+    );
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-medium);
+    box-shadow: var(--md-sys-elevation-1);
     padding: 0.4rem;
     display: flex;
     flex-direction: column;
@@ -143,30 +161,33 @@
     gap: 0.1rem;
   }
   .card-char {
-    font-size: 1.6rem;
-    font-weight: 700;
+    font-family: var(--md-ref-typeface-kanji);
+    font-size: 1.7rem;
+    color: var(--md-sys-color-on-surface);
   }
   .card-count {
     font-size: 0.7rem;
-    color: #666;
+    color: var(--md-sys-color-on-surface-variant);
   }
   .card-yomi {
     font-size: 0.72rem;
-    color: #555;
+    color: var(--md-sys-color-on-surface-variant);
     text-align: center;
   }
   .card-mean {
     font-size: 0.72rem;
-    color: #555;
+    color: var(--md-sys-color-on-surface-variant);
     text-align: center;
   }
   .mask-title {
-    font-size: 0.9rem;
-    color: #666;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-body-size);
+    color: var(--md-sys-color-on-surface-variant);
     margin: 1rem 0 0.4rem;
   }
   .card.mask {
-    color: #bbb;
+    color: var(--md-sys-color-outline-variant);
+    font-family: var(--md-ref-typeface-kanji);
     font-size: 1.4rem;
     min-height: 3rem;
     justify-content: center;

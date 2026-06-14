@@ -132,48 +132,74 @@
 
 <style>
   .newbest {
-    font-size: 1.2rem;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-title-size);
     font-weight: 700;
-    color: #e67700;
+    color: var(--md-sys-color-tertiary);
   }
   .mode {
     display: inline-block;
     margin: 0.25rem 0;
-    padding: 0.1rem 0.6rem;
-    font-size: 0.85rem;
+    padding: 0.1rem 0.7rem;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-label-size);
     font-weight: 700;
-    color: #c0392b;
-    border: 1px solid #c0392b;
-    border-radius: 0.8rem;
+    color: var(--md-sys-color-primary);
+    border: 1px solid var(--md-sys-color-primary);
+    border-radius: var(--md-sys-shape-corner-full);
+  }
+  /* 称号は巻物/賞状風の枠で強調する。 */
+  .rank {
+    margin: 0.5rem auto;
+    max-width: 18rem;
+    padding: 0.6rem 1rem;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-title-size);
+    color: var(--md-sys-color-on-surface);
+    background: linear-gradient(
+      160deg,
+      var(--md-sys-color-surface) 0%,
+      var(--md-sys-color-surface-container) 100%
+    );
+    border: 2px solid var(--md-sys-color-tertiary);
+    border-radius: var(--md-sys-shape-corner-medium);
+    box-shadow: var(--md-sys-elevation-1);
   }
   .collection {
     margin: 0.25rem 0;
-    font-size: 1.05rem;
+    font-size: var(--md-sys-typescale-title-size);
+    color: var(--md-sys-color-on-surface);
   }
   .collection strong {
-    font-size: 1.3rem;
+    font-size: var(--md-sys-typescale-headline-size);
     font-variant-numeric: tabular-nums;
-    color: #2a6;
+    color: var(--md-sys-color-tertiary);
   }
   .collection small {
-    color: #666;
+    color: var(--md-sys-color-on-surface-variant);
     font-size: 0.8rem;
   }
-  .rank,
   .score {
     margin: 0.25rem 0;
-    font-size: 1.1rem;
+    font-size: var(--md-sys-typescale-title-size);
+    color: var(--md-sys-color-on-surface);
   }
-  .score strong,
   .rank strong {
-    font-size: 1.3rem;
+    font-size: var(--md-sys-typescale-headline-size);
+    color: var(--md-sys-color-primary);
+  }
+  .score strong {
+    font-size: var(--md-sys-typescale-headline-size);
+    font-variant-numeric: tabular-nums;
+    color: var(--md-sys-color-tertiary);
   }
   .block {
     margin: 1rem 0;
   }
   .block h3 {
-    font-size: 0.95rem;
-    color: #555;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-body-size);
+    color: var(--md-sys-color-on-surface-variant);
     margin: 0 0 0.4rem;
   }
   .kanji-list {
@@ -186,24 +212,27 @@
     justify-content: center;
   }
   .kanji-list li {
+    font-family: var(--md-ref-typeface-kanji);
     font-size: 1.4rem;
-    padding: 0.2rem 0.4rem;
-    border: 1px solid #ddd;
-    border-radius: 0.4rem;
+    padding: 0.25rem 0.5rem;
+    color: var(--md-sys-color-on-surface);
+    background: var(--md-sys-color-surface-container-low);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-small);
   }
   .kanji-list li small {
     font-size: 0.7rem;
-    color: #666;
+    color: var(--md-sys-color-on-surface-variant);
   }
   .kanji-list li.new {
-    border-color: #e67700;
+    border-color: var(--md-sys-color-tertiary);
   }
   .none {
-    color: #888;
+    color: var(--md-sys-color-on-surface-variant);
     margin: 0;
   }
   .share-note {
-    color: #555;
-    font-size: 0.9rem;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-body-size);
   }
 </style>

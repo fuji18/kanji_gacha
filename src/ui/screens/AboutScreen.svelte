@@ -6,6 +6,7 @@
   const CC_BY_SA_3 = 'https://creativecommons.org/licenses/by-sa/3.0/';
   const EDRDG_LICENSE = 'https://www.edrdg.org/edrdg/licence.html';
   const KANJIVG = 'https://kanjivg.tagaini.net/';
+  const OFL_FAQ = 'https://scripts.sil.org/OFL';
 </script>
 
 <section class="screen about">
@@ -49,6 +50,16 @@
   </section>
 
   <section class="block">
+    <h3>フォント</h3>
+    <p class="credit">
+      ボタン・見出し等の筆文字フォントに Yuji Syuku（The Yuji Project
+      Authors）の 一部文字を抜粋したサブセットを同梱しています。<br />
+      Licensed under the SIL Open Font License, Version 1.1<br />
+      <a href={OFL_FAQ} target="_blank" rel="noopener noreferrer">{OFL_FAQ}</a>
+    </p>
+  </section>
+
+  <section class="block">
     <h3>データの保存について</h3>
     <p class="notice">
       図鑑・ベストスコアはお使いのブラウザ（localStorage）に保存されます。
@@ -62,34 +73,41 @@
 </section>
 
 <style>
+  .about h2 {
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-headline-size);
+    color: var(--md-sys-color-on-surface);
+  }
   .intro {
-    color: #444;
+    color: var(--md-sys-color-on-surface-variant);
   }
   .block {
     margin: 1rem 0;
     text-align: left;
   }
   .block h3 {
-    font-size: 0.95rem;
-    color: #555;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-body-size);
+    color: var(--md-sys-color-on-surface);
     margin: 0 0 0.4rem;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--md-sys-color-outline-variant);
     padding-bottom: 0.2rem;
   }
   .credit {
     font-size: 0.85rem;
     line-height: 1.6;
-    background: #fafafa;
-    border: 1px solid #eee;
-    border-radius: 0.4rem;
+    color: var(--md-sys-color-on-surface);
+    background: var(--md-sys-color-surface-container-low);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-small);
     padding: 0.6rem 0.8rem;
   }
   .notice {
     font-size: 0.85rem;
-    color: #555;
+    color: var(--md-sys-color-on-surface-variant);
   }
   a {
-    color: #1565c0;
+    color: var(--md-sys-color-secondary);
     word-break: break-all;
   }
 </style>

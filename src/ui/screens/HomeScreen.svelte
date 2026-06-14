@@ -107,6 +107,36 @@
 </section>
 
 <style>
+  .home h2 {
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-headline-size);
+    color: var(--md-sys-color-on-surface);
+  }
+  /* 和紙カードの共通装飾（レベル札・今日のお題・タイムアタック）。 */
+  .level,
+  .daily,
+  .ta {
+    width: 100%;
+    background: linear-gradient(
+      160deg,
+      var(--md-sys-color-surface) 0%,
+      var(--md-sys-color-surface-container) 100%
+    );
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-large);
+    box-shadow: var(--md-sys-elevation-1);
+    cursor: pointer;
+    text-align: left;
+    transition:
+      transform 0.1s ease,
+      box-shadow 0.1s ease;
+  }
+  .level:hover,
+  .daily:hover,
+  .ta:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--md-sys-elevation-2);
+  }
   .levels {
     list-style: none;
     padding: 0;
@@ -116,81 +146,92 @@
     gap: 0.75rem;
   }
   .level {
-    width: 100%;
     display: grid;
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.75rem;
     padding: 0.9rem 1.1rem;
-    font-size: 1rem;
-    cursor: pointer;
-    text-align: left;
+    /* 難易度で左帯のアクセント色を変える（藍→朱→金）。 */
+    border-left: 6px solid var(--md-sys-color-secondary);
+  }
+  .levels li:nth-child(2) .level {
+    border-left-color: var(--md-sys-color-primary);
   }
   .level-label {
+    font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: var(--md-sys-typescale-title-size);
+    color: var(--md-sys-color-on-surface);
   }
   .level-desc {
-    color: #555;
-    font-size: 0.85rem;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: var(--md-sys-typescale-label-size);
   }
   .level-best {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    color: #333;
+    color: var(--md-sys-color-on-surface-variant);
   }
   .daily {
-    width: 100%;
     padding: 0.8rem 1.1rem;
-    font-size: 1rem;
-    cursor: pointer;
     display: grid;
     grid-template-columns: 1fr auto auto;
     align-items: center;
     gap: 0.75rem;
-    text-align: left;
+    /* 今日のお題は特別感：金の枠アクセント。 */
+    border: 1px solid var(--md-sys-color-tertiary);
   }
   .daily-title {
+    font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
+    color: var(--md-sys-color-on-surface);
   }
   .daily-level {
-    font-size: 0.85rem;
-    color: #555;
+    font-size: var(--md-sys-typescale-label-size);
+    color: var(--md-sys-color-on-surface-variant);
   }
   .daily-best {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    color: #333;
+    color: var(--md-sys-color-on-surface-variant);
   }
   .ta-section {
     margin: 1.5rem 0 0;
   }
   .ta-title {
-    font-size: 1rem;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-title-size);
+    color: var(--md-sys-color-on-surface);
     margin: 0 0 0.2rem;
   }
   .ta-lead {
-    font-size: 0.82rem;
-    color: #555;
+    font-size: var(--md-sys-typescale-label-size);
+    color: var(--md-sys-color-on-surface-variant);
     margin: 0 0 0.6rem;
   }
   .ta {
-    width: 100%;
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
     gap: 0.75rem;
     padding: 0.7rem 1.1rem;
-    font-size: 1rem;
-    cursor: pointer;
-    text-align: left;
+    border-left: 6px solid var(--md-sys-color-primary);
   }
   .ta-label {
+    font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
+    color: var(--md-sys-color-on-surface);
   }
   .ta-best {
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    color: #333;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .level,
+    .daily,
+    .ta {
+      transition: none;
+    }
   }
 </style>
