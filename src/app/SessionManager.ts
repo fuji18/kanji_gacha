@@ -1,6 +1,7 @@
 import type { Writable } from 'svelte/store';
 import type {
   CombineResult,
+  GameMode,
   GameResult,
   GameSession,
   HandPart,
@@ -10,10 +11,16 @@ import type {
   PlayStats,
   ZukanState,
 } from '../domain/types';
-import { GACHA_COUNT, HAND_CAP, HINT_COST } from '../domain/constants';
+import {
+  GACHA_COUNT,
+  HAND_CAP,
+  HINT_COST,
+  TIME_ATTACK,
+} from '../domain/constants';
 import { CombineService } from '../domain/combine/CombineService';
 import { GachaService } from '../domain/gacha/GachaService';
 import { ScoreService } from '../domain/score/ScoreService';
+import { computeExtensionMs } from '../domain/timeattack/timeAttack';
 import { RescueService } from '../domain/rescue/RescueService';
 import { resolveRank } from '../domain/rank/resolveRank';
 import { mulberry32 } from '../domain/rng/mulberry32';
@@ -30,6 +37,8 @@ export interface SessionManagerOptions {
   now?: () => number;
   /** フリープレイ用の乱数源（[0,1)）。テストで決定化する。 */
   random?: () => number;
+  /** タイムアタックの初期持ち時間（ms）。既定は TIME_ATTACK.initialMs。E2E/テストで短縮する無害なレバー。 */
+  timeAttackInitialMs?: number;
   sessionStore?: Writable<GameSession | null>;
   persistedStore?: Writable<PersistedState>;
 }
@@ -67,6 +76,7 @@ function freshStats(): PlayStats {
 export class SessionManager {
   private readonly now: () => number;
   private readonly random: () => number;
+  private readonly timeAttackInitialMs: number;
   private readonly sessionStore: Writable<GameSession | null>;
   private readonly persistedStore: Writable<PersistedState>;
 
@@ -95,6 +105,8 @@ export class SessionManager {
   ) {
     this.now = opts.now ?? (() => Date.now());
     this.random = opts.random ?? (() => Math.random());
+    this.timeAttackInitialMs =
+      opts.timeAttackInitialMs ?? TIME_ATTACK.initialMs;
     this.sessionStore = opts.sessionStore ?? sessionStore;
     this.persistedStore = opts.persistedStore ?? persistedStore;
 
@@ -164,9 +176,10 @@ export class SessionManager {
    * （UI が HAND_CAP 等を持たずに済む）。playing かつ 手札に空き かつ 残回数あり。
    */
   canPullGacha(s: GameSession): boolean {
-    return (
-      s.phase === 'playing' && s.hand.length < HAND_CAP && s.gachaRemaining > 0
-    );
+    if (s.phase !== 'playing' || s.hand.length >= HAND_CAP) return false;
+    // タイムアタックはガチャ無制限（残回数を見ない）。じっくりは残回数が必要。
+    if (s.gameMode === 'timeAttack') return true;
+    return s.gachaRemaining > 0;
   }
 
   /**
@@ -181,8 +194,15 @@ export class SessionManager {
   /**
    * セッションを開始する。RNG を生成（free=`Math.random` ラッパ／daily=`mulberry32(dailySeed(...))`）し、
    * level 依存の救済サービスと採番器をセッション毎に用意する。
+   *
+   * `gameMode`（既定 `gachaCount`）でタイムアタックを選べる（T-027）。timeAttack は持ち時間制で
+   * `deadlineAtMs` を初期化し、ガチャ残は使わない（無制限）。
    */
-  start(level: Level, mode: 'free' | 'daily'): GameSession {
+  start(
+    level: Level,
+    mode: 'free' | 'daily',
+    gameMode: GameMode = 'gachaCount'
+  ): GameSession {
     let seed: number | null = null;
     if (mode === 'daily') {
       seed = dailySeed(todayYmdJst(this.now()));
@@ -216,8 +236,14 @@ export class SessionManager {
     const session: GameSession = {
       level,
       mode,
+      gameMode,
       seed,
       gachaRemaining: GACHA_COUNT,
+      deadlineAtMs:
+        gameMode === 'timeAttack'
+          ? this.startedAtMs + this.timeAttackInitialMs
+          : null,
+      lastSuccessAtMs: null,
       hand: [],
       score: { score: 0, comboMultiplier: 1.0, comboCount: 0 },
       createdKanji: [],
@@ -236,17 +262,23 @@ export class SessionManager {
    */
   pullGacha(s: GameSession): void {
     if (s.phase !== 'playing') return;
-    if (s.hand.length >= HAND_CAP || s.gachaRemaining <= 0) {
+    // 手札上限は両モード共通の防御。残回数の制約はじっくりモードのみ。
+    if (s.hand.length >= HAND_CAP) {
+      this.publish();
+      return;
+    }
+    if (s.gameMode === 'gachaCount' && s.gachaRemaining <= 0) {
       // 引けない事前条件（防御）。残0で呼ばれた場合は詰み/手札0の終了判定だけ走らせる
       // （「各操作後に終了判定」の一貫性。UI外から呼ばれても limbo に陥らない）。
-      if (s.gachaRemaining === 0) this.checkGameEnd(s);
+      this.checkGameEnd(s);
       this.publish();
       return;
     }
 
     const part = this.gacha.draw(s.level, this.pool, this.rng);
     s.hand.push({ instanceId: this.nextId(), partId: part.id });
-    s.gachaRemaining -= 1;
+    // タイムアタックはガチャ無制限のため残回数を減らさない。
+    if (s.gameMode === 'gachaCount') s.gachaRemaining -= 1;
 
     this.checkGameEnd(s);
     this.publish();
@@ -274,6 +306,10 @@ export class SessionManager {
     if (resolved === null) {
       this.score.onMiss(s.score);
       s.stats.combineMiss += 1;
+      // タイムアタック：ミスは持ち時間を減算（コンボリセットは onMiss 済み・T-027）。
+      if (s.gameMode === 'timeAttack' && s.deadlineAtMs !== null) {
+        s.deadlineAtMs -= TIME_ATTACK.missPenaltyMs;
+      }
       this.checkGameEnd(s);
       this.publish();
       return miss;
@@ -284,9 +320,26 @@ export class SessionManager {
     s.hand = s.hand.filter((h) => !ids.has(h.instanceId));
 
     // 採点（前進前倍率で加点）。差分を gainedScore として返す。
+    // 時間延長も同じ前進前倍率を「この合体の価値」として用いる（T-027）。
+    const multiplierForThis = s.score.comboMultiplier;
     const before = s.score.score;
     this.score.onSuccess(s.score, resolved.awarded);
     const gainedScore = s.score.score - before;
+
+    // タイムアタック：持ち時間を延長し、速攻判定用の直近成功時刻を更新する（T-027・企画整理書 §11）。
+    if (s.gameMode === 'timeAttack' && s.deadlineAtMs !== null) {
+      const nowMs = this.now();
+      const speedy =
+        s.lastSuccessAtMs !== null &&
+        nowMs - s.lastSuccessAtMs <= TIME_ATTACK.speedWindowMs;
+      s.deadlineAtMs += computeExtensionMs({
+        strokes: resolved.awarded.strokes,
+        partCount: sel.length,
+        speedy,
+        multiplier: multiplierForThis,
+      });
+      s.lastSuccessAtMs = nowMs;
+    }
 
     // 作成漢字・新規発見・別解の記録
     const awardedChar = resolved.awarded.char;
@@ -343,6 +396,8 @@ export class SessionManager {
    */
   private checkGameEnd(s: GameSession): void {
     // 呼び出し元（pullGacha/combine/discardAndDraw/useHint）が phase==='playing' を確認済み。
+    // タイムアタックは残回数・詰みでは終了しない（時間切れのみ＝checkTimeout で判定）。
+    if (s.gameMode === 'timeAttack') return;
     if (s.hand.length === 0 && s.gachaRemaining === 0) {
       this.end(s, 'empty_hand');
       return;
@@ -355,12 +410,40 @@ export class SessionManager {
     }
   }
 
+  /** タイムアタックの初期持ち時間（ms）。UI の残時間バーの満タン基準に使う（ui→domain 直接参照を避ける）。 */
+  timeAttackTotalMs(): number {
+    return this.timeAttackInitialMs;
+  }
+
+  /**
+   * タイムアタックの残り時間（ms）。`deadlineAtMs - now` を0でクランプする（T-027）。
+   * timeAttack 以外・未開始は0。UI のティッカーが毎フレーム表示と終了判定に使う。
+   */
+  timeRemainingMs(s: GameSession | null = this.session): number {
+    if (s === null || s.gameMode !== 'timeAttack' || s.deadlineAtMs === null) {
+      return 0;
+    }
+    return Math.max(0, s.deadlineAtMs - this.now());
+  }
+
+  /**
+   * タイムアタックの時間切れを判定し、残0なら終了する（T-027）。UI のティッカーから呼ぶ。
+   * playing かつ timeAttack のときのみ作用し、それ以外は no-op。
+   */
+  checkTimeout(): void {
+    const s = this.session;
+    if (s === null || s.phase !== 'playing' || s.gameMode !== 'timeAttack') {
+      return;
+    }
+    if (this.timeRemainingMs(s) <= 0) this.end(s, 'timeup');
+  }
+
   /**
    * セッションを終了し結果を確定する（機能設計5.1）。冪等：既に終了済みなら確定済み結果を返す。
    * 図鑑・レベル別ベスト・（デイリーは）デイリーベストを**まとめて永続化**し（書込み集約・機能設計9）、
    * 称号を確定して `GameResult` を返す。
    */
-  end(s: GameSession, reason: 'stuck' | 'empty_hand'): GameResult {
+  end(s: GameSession, reason: 'stuck' | 'empty_hand' | 'timeup'): GameResult {
     if (s.phase === 'ended' && this.result !== null) return this.result;
 
     s.phase = 'ended';
@@ -369,11 +452,13 @@ export class SessionManager {
     s.stats.durationMs = this.now() - this.startedAtMs;
 
     // 新記録判定は永続化の前に行う（persistResults が best を更新し this.persisted を読み直すため）。
-    // daily はその日のデイリーベスト、free はレベルベストと比較する（T-022）。
+    // timeAttack は別枠ベスト、daily はその日のデイリーベスト、free はレベルベストと比較する（T-022・T-027）。
     const prevBest =
-      s.mode === 'daily'
-        ? (this.persisted.dailyBest[todayYmdJst(this.now())] ?? 0)
-        : this.persisted.bestScores[s.level];
+      s.gameMode === 'timeAttack'
+        ? this.persisted.timeAttackBest[s.level]
+        : s.mode === 'daily'
+          ? (this.persisted.dailyBest[todayYmdJst(this.now())] ?? 0)
+          : this.persisted.bestScores[s.level];
     const isNewBest = s.score.score > prevBest;
 
     this.persistResults(s);
@@ -381,6 +466,7 @@ export class SessionManager {
     const result: GameResult = {
       level: s.level,
       mode: s.mode,
+      gameMode: s.gameMode,
       score: s.score.score,
       rank: resolveRank(s.score.score),
       createdKanji: [...s.createdKanji],
@@ -404,9 +490,14 @@ export class SessionManager {
       addDiscovery(zukan.altDiscovered, char, iso);
 
     this.storage.saveZukan(zukan);
-    this.storage.saveBest(s.level, s.score.score);
-    if (s.mode === 'daily') {
-      this.storage.saveDailyBest(todayYmdJst(this.now()), s.score.score);
+    // ベストはモード別の別枠に保存（混ぜない・T-027）。図鑑は両モード共通。
+    if (s.gameMode === 'timeAttack') {
+      this.storage.saveTimeAttackBest(s.level, s.score.score);
+    } else {
+      this.storage.saveBest(s.level, s.score.score);
+      if (s.mode === 'daily') {
+        this.storage.saveDailyBest(todayYmdJst(this.now()), s.score.score);
+      }
     }
 
     // 永続ビューを最新化（図鑑/ベストの読み取りビュー）

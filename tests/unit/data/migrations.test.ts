@@ -16,6 +16,11 @@ describe('defaultState', () => {
     expect(s.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(s.zukan).toEqual({ discovered: {}, altDiscovered: {} });
     expect(s.bestScores).toEqual({ elementary: 0, juniorhigh: 0, joyo: 0 });
+    expect(s.timeAttackBest).toEqual({
+      elementary: 0,
+      juniorhigh: 0,
+      joyo: 0,
+    });
     expect(s.dailyBest).toEqual({});
     expect(s.settings).toEqual({ hintAlwaysOn: false });
   });
@@ -49,6 +54,18 @@ describe('migrate v0 → v1（altDiscovered 補完・新問題C）', () => {
     expect(m.bestScores.elementary).toBe(30);
     expect(m.dailyBest['20260101']).toBe(30);
     expect(m.settings.hintAlwaysOn).toBe(true);
+    // T-027：timeAttackBest 無しの旧データは既定 {0,0,0} で補完される（後方互換）。
+    expect(m.timeAttackBest).toEqual({ elementary: 0, juniorhigh: 0, joyo: 0 });
+  });
+
+  it('既存の timeAttackBest は保持し、型不整合フィールドは既定に置換する（T-027）', () => {
+    const m = migrate({
+      schemaVersion: 1,
+      timeAttackBest: { elementary: 120, juniorhigh: 'x', joyo: 80 },
+    });
+    expect(m.timeAttackBest.elementary).toBe(120); // 保持
+    expect(m.timeAttackBest.juniorhigh).toBe(0); // 不正→既定
+    expect(m.timeAttackBest.joyo).toBe(80); // 保持
   });
 });
 

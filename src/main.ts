@@ -15,10 +15,23 @@ import { mulberry32 } from './domain/rng/mulberry32';
  * デイリーは元から日付シードで決定的なため対象外。
  */
 function sessionOptionsFromUrl(): SessionManagerOptions {
-  const raw = new URLSearchParams(location.search).get('seed');
-  if (raw === null) return {};
-  const seed = Number(raw);
-  return Number.isFinite(seed) ? { random: mulberry32(seed) } : {};
+  const params = new URLSearchParams(location.search);
+  const opts: SessionManagerOptions = {};
+
+  const rawSeed = params.get('seed');
+  if (rawSeed !== null) {
+    const seed = Number(rawSeed);
+    if (Number.isFinite(seed)) opts.random = mulberry32(seed);
+  }
+
+  // `?taMs=<整数>` でタイムアタックの初期持ち時間を上書きする（E2E 短縮用の無害なレバー・T-027）。
+  const rawTaMs = params.get('taMs');
+  if (rawTaMs !== null) {
+    const taMs = Number(rawTaMs);
+    if (Number.isFinite(taMs) && taMs > 0) opts.timeAttackInitialMs = taMs;
+  }
+
+  return opts;
 }
 
 // エントリポイント（T-015）。辞書ロードを待ってから App をマウントする。

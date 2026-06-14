@@ -91,6 +91,13 @@ export class StorageRepository {
     this.persist();
   }
 
+  /** タイムアタックのレベル別ベストを保存する（T-027・別枠）。最大値のみ更新（同点は抑制）。 */
+  saveTimeAttackBest(level: Level, score: number): void {
+    if (score <= this.state.timeAttackBest[level]) return;
+    this.state.timeAttackBest[level] = score;
+    this.persist();
+  }
+
   /** デイリーベストを保存する（F9）。同日内の最大値を保持する（同点は書込み抑制）。 */
   saveDailyBest(date: string, score: number): void {
     if (score <= (this.state.dailyBest[date] ?? 0)) return;

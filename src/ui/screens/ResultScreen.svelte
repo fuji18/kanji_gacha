@@ -33,7 +33,8 @@
 
   function retry(): void {
     if (!result) return;
-    sessionManager.start(result.level, result.mode);
+    // 同じモード（じっくり/タイムアタック）で再開する（T-027）。
+    sessionManager.start(result.level, result.mode, result.gameMode);
     navigate('game');
   }
 
@@ -71,6 +72,10 @@
   {:else}
     {#if result.isNewBest}
       <p class="newbest" data-testid="new-best">🎉 新記録！</p>
+    {/if}
+
+    {#if result.gameMode === 'timeAttack'}
+      <p class="mode" data-testid="result-mode">タイムアタック</p>
     {/if}
 
     <p class="rank">称号：<strong data-testid="rank">{result.rank}</strong></p>
@@ -123,6 +128,16 @@
     font-size: 1.2rem;
     font-weight: 700;
     color: #e67700;
+  }
+  .mode {
+    display: inline-block;
+    margin: 0.25rem 0;
+    padding: 0.1rem 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #c0392b;
+    border: 1px solid #c0392b;
+    border-radius: 0.8rem;
   }
   .rank,
   .score {

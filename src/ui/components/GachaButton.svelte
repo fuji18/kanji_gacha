@@ -4,12 +4,19 @@
     remaining: number;
     disabled?: boolean;
     onclick?: () => void;
+    /** 残回数を併記するか。タイムアタックは無制限のため false（既定 true で従来通り）。 */
+    showRemaining?: boolean;
   }
-  let { remaining, disabled = false, onclick }: Props = $props();
+  let {
+    remaining,
+    disabled = false,
+    onclick,
+    showRemaining = true,
+  }: Props = $props();
 </script>
 
 <button type="button" class="gacha" {disabled} {onclick}>
-  ガチャ（残 {remaining}）
+  {#if showRemaining}ガチャ（残 {remaining}）{:else}ガチャ{/if}
 </button>
 
 <style>

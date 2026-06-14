@@ -5,8 +5,16 @@
     comboMultiplier: number;
     comboCount: number;
     gachaRemaining: number;
+    /** ガチャ残stat を表示するか。タイムアタックは時間表示に置き換えるため false（既定 true で従来通り）。 */
+    showGachaRemaining?: boolean;
   }
-  let { score, comboMultiplier, comboCount, gachaRemaining }: Props = $props();
+  let {
+    score,
+    comboMultiplier,
+    comboCount,
+    gachaRemaining,
+    showGachaRemaining = true,
+  }: Props = $props();
 </script>
 
 <dl class="scorebar">
@@ -20,10 +28,12 @@
       ×{comboMultiplier.toFixed(1)}<small>（{comboCount}）</small>
     </dd>
   </div>
-  <div class="stat">
-    <dt>ガチャ残</dt>
-    <dd data-testid="gacha-remaining">{gachaRemaining}</dd>
-  </div>
+  {#if showGachaRemaining}
+    <div class="stat">
+      <dt>ガチャ残</dt>
+      <dd data-testid="gacha-remaining">{gachaRemaining}</dd>
+    </div>
+  {/if}
 </dl>
 
 <style>

@@ -92,6 +92,18 @@ describe('StorageRepository ベスト/デイリーベスト更新（F9）', () =
     expect(repo.loadState().bestScores.elementary).toBe(70);
   });
 
+  it('saveTimeAttackBest は別枠でより高いスコアのみ更新（bestScores と独立・T-027）', () => {
+    const storage = new MemoryStorage();
+    const repo = new StorageRepository(storage);
+    repo.saveBest('elementary', 50); // じっくりベスト
+    repo.saveTimeAttackBest('elementary', 80);
+    repo.saveTimeAttackBest('elementary', 40); // 低い→無視
+    expect(repo.loadState().timeAttackBest.elementary).toBe(80);
+    expect(repo.loadState().bestScores.elementary).toBe(50); // 別枠で混ざらない
+    repo.saveTimeAttackBest('elementary', 120); // 高い→更新
+    expect(repo.loadState().timeAttackBest.elementary).toBe(120);
+  });
+
   it('saveDailyBest は日付ごとに最大値を保持', () => {
     const storage = new MemoryStorage();
     const repo = new StorageRepository(storage);
