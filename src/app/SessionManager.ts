@@ -39,6 +39,8 @@ export interface SessionManagerOptions {
   random?: () => number;
   /** タイムアタックの初期持ち時間（ms）。既定は TIME_ATTACK.initialMs。E2E/テストで短縮する無害なレバー。 */
   timeAttackInitialMs?: number;
+  /** 達成型（deck）の山札枚数の上限。E2E/テストで短縮するための無害なレバー（既定は無制限）。 */
+  deckLimit?: number;
   sessionStore?: Writable<GameSession | null>;
   persistedStore?: Writable<PersistedState>;
 }
@@ -77,6 +79,7 @@ export class SessionManager {
   private readonly now: () => number;
   private readonly random: () => number;
   private readonly timeAttackInitialMs: number;
+  private readonly deckLimit: number | null;
   private readonly sessionStore: Writable<GameSession | null>;
   private readonly persistedStore: Writable<PersistedState>;
 
@@ -93,6 +96,8 @@ export class SessionManager {
   private rescue: RescueService | null = null;
   private pool: Part[] = [];
   private partsById = new Map<string, Part>();
+  // deck（達成型）の対象漢字集合。収集率（completedCount）算出に使う。timeAttack では空。
+  private deckTargets = new Set<string>();
   private persisted: PersistedState;
   private baselineDiscovered = new Set<string>();
   private altChars: string[] = [];
@@ -107,6 +112,7 @@ export class SessionManager {
     this.random = opts.random ?? (() => Math.random());
     this.timeAttackInitialMs =
       opts.timeAttackInitialMs ?? TIME_ATTACK.initialMs;
+    this.deckLimit = opts.deckLimit ?? null;
     this.sessionStore = opts.sessionStore ?? sessionStore;
     this.persistedStore = opts.persistedStore ?? persistedStore;
 
@@ -168,7 +174,10 @@ export class SessionManager {
    */
   dailyInfo(): { level: Level; ymd: string } {
     const ymd = todayYmdJst(this.now());
-    return { level: dailyLevel(dailySeed(ymd)), ymd };
+    const lvl = dailyLevel(dailySeed(ymd));
+    // 達成型（deck）は elementary / juniorhigh のみ。joyo はタイムアタック専用のため
+    // デイリーでは juniorhigh に丸める（むずかしい廃止に伴う調整）。
+    return { level: lvl === 'joyo' ? 'juniorhigh' : lvl, ymd };
   }
 
   /**
@@ -187,21 +196,25 @@ export class SessionManager {
    * ふつうはガチャ残がコスト以上必要（`RescueService.useHint` の事前条件と DRY）。
    */
   canUseHint(s: GameSession): boolean {
+    if (s.phase !== 'playing') return false;
+    // 達成型（deck）はヒント無料・常時。タイムアタックは従来のレベル別コスト（joyo は不可）。
+    if (s.gameMode === 'deck') return true;
     const cost = HINT_COST[s.level];
-    return s.phase === 'playing' && cost !== null && s.gachaRemaining >= cost;
+    return cost !== null && s.gachaRemaining >= cost;
   }
 
   /**
    * セッションを開始する。RNG を生成（free=`Math.random` ラッパ／daily=`mulberry32(dailySeed(...))`）し、
-   * level 依存の救済サービスと採番器をセッション毎に用意する。
+   * 採番器・モード別の母集合（deck は山札・timeAttack は重み付きプール）をセッション毎に用意する。
    *
-   * `gameMode`（既定 `gachaCount`）でタイムアタックを選べる（T-027）。timeAttack は持ち時間制で
-   * `deadlineAtMs` を初期化し、ガチャ残は使わない（無制限）。
+   * `gameMode`（既定 `deck`）：
+   *  - deck（達成型）：対象レベルの漢字を分解した有限山札をシャッフルして引く。回数制限なし。
+   *  - timeAttack：常用スコープの重み付き無限プール抽選＋持ち時間制（`deadlineAtMs` 初期化）。
    */
   start(
     level: Level,
     mode: 'free' | 'daily',
-    gameMode: GameMode = 'gachaCount'
+    gameMode: GameMode = 'deck'
   ): GameSession {
     let seed: number | null = null;
     if (mode === 'daily') {
@@ -212,16 +225,6 @@ export class SessionManager {
     }
 
     this.nextId = makeIdFactory();
-    // pool は level 依存。セッション毎に1度引き、pullGacha と救済の補充ガチャで共有する。
-    this.pool = this.dict.getPool(level);
-    // 手札の partId → 部品 を引くための索引（UI の表示解決に使う。ui→data 直接アクセスを避ける）。
-    this.partsById = new Map(this.pool.map((p) => [p.id, p]));
-    this.rescue = new RescueService(
-      this.combineService,
-      this.gacha,
-      this.pool,
-      this.nextId
-    );
 
     // 永続ベースライン（新規発見判定・終了時の図鑑反映の起点）
     this.persisted = this.storage.loadState();
@@ -233,16 +236,49 @@ export class SessionManager {
     this.startedAtMs = this.now();
     this.result = null;
 
+    let deck: string[] = [];
+    let targetTotal = 0;
+    let gachaRemaining = 0;
+    let deadlineAtMs: number | null = null;
+
+    if (gameMode === 'timeAttack') {
+      // タイムアタック：重み付きプールを母集合に、回数無制限・時間制で引く。
+      this.pool = this.dict.getPool(level);
+      this.partsById = new Map(this.pool.map((p) => [p.id, p]));
+      this.rescue = new RescueService(
+        this.combineService,
+        this.gacha,
+        this.pool,
+        this.nextId
+      );
+      this.deckTargets = new Set();
+      gachaRemaining = GACHA_COUNT; // discard コスト用の残（時間制では表示しない）
+      deadlineAtMs = this.startedAtMs + this.timeAttackInitialMs;
+    } else {
+      // 達成型（deck）：対象レベルの山札を構築・シャッフルし、非復元で引く。
+      const builtDeck = this.dict.buildDeck(level);
+      this.partsById = new Map(builtDeck.map((p) => [p.id, p]));
+      this.pool = [];
+      this.rescue = null;
+      this.deckTargets = new Set(this.dict.deckTargetKanji(level));
+      deck = this.shuffle(builtDeck.map((p) => p.id));
+      // E2E/テスト用に山札枚数を上限で切り詰める（無害なレバー・既定は無制限）。
+      if (this.deckLimit !== null && deck.length > this.deckLimit) {
+        deck = deck.slice(0, this.deckLimit);
+      }
+      targetTotal = this.deckTargets.size;
+      gachaRemaining = deck.length; // 山札残（UI 表示・canPull 用）
+    }
+
     const session: GameSession = {
       level,
       mode,
       gameMode,
       seed,
-      gachaRemaining: GACHA_COUNT,
-      deadlineAtMs:
-        gameMode === 'timeAttack'
-          ? this.startedAtMs + this.timeAttackInitialMs
-          : null,
+      deck,
+      targetTotal,
+      gachaRemaining,
+      deadlineAtMs,
       lastSuccessAtMs: null,
       hand: [],
       score: { score: 0, comboMultiplier: 1.0, comboCount: 0 },
@@ -256,29 +292,43 @@ export class SessionManager {
     return session;
   }
 
+  /** Fisher–Yates シャッフル（注入 RNG 使用＝デイリーはシードで再現可能）。 */
+  private shuffle(arr: string[]): string[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(this.rng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   /**
    * ガチャを1回引く（PRD F1）。事前条件：playing かつ手札に空きがあり残回数がある。
    * 上限到達・残0は no-op（UI 側もボタン非活性・T-017）。引いた部品を手札へ追加し終了判定する。
    */
   pullGacha(s: GameSession): void {
     if (s.phase !== 'playing') return;
-    // 手札上限は両モード共通の防御。残回数の制約はじっくりモードのみ。
+    // 手札上限は両モード共通の防御。
     if (s.hand.length >= HAND_CAP) {
       this.publish();
       return;
     }
-    if (s.gameMode === 'gachaCount' && s.gachaRemaining <= 0) {
-      // 引けない事前条件（防御）。残0で呼ばれた場合は詰み/手札0の終了判定だけ走らせる
-      // （「各操作後に終了判定」の一貫性。UI外から呼ばれても limbo に陥らない）。
-      this.checkGameEnd(s);
-      this.publish();
-      return;
-    }
 
-    const part = this.gacha.draw(s.level, this.pool, this.rng);
-    s.hand.push({ instanceId: this.nextId(), partId: part.id });
-    // タイムアタックはガチャ無制限のため残回数を減らさない。
-    if (s.gameMode === 'gachaCount') s.gachaRemaining -= 1;
+    if (s.gameMode === 'deck') {
+      // 達成型：山札末尾から非復元で1枚引く。山札が尽きていれば終了判定のみ走らせる。
+      const partId = s.deck.pop();
+      if (partId === undefined) {
+        this.checkGameEnd(s);
+        this.publish();
+        return;
+      }
+      s.hand.push({ instanceId: this.nextId(), partId });
+      s.gachaRemaining = s.deck.length; // 山札残を同期
+    } else {
+      // タイムアタック：重み付きプールから無制限に引く（残回数を減らさない）。
+      const part = this.gacha.draw(s.level, this.pool, this.rng);
+      s.hand.push({ instanceId: this.nextId(), partId: part.id });
+    }
 
     this.checkGameEnd(s);
     this.publish();
@@ -364,7 +414,29 @@ export class SessionManager {
    * 実行できた場合のみ KPI を加算する（対象 instanceId が手札から消えたかで判定）。
    */
   discardAndDraw(s: GameSession, instanceId: string): void {
-    if (s.phase !== 'playing' || this.rescue === null) return;
+    if (s.phase !== 'playing') return;
+
+    if (s.gameMode === 'deck') {
+      // 達成型：手札1枚を捨て、山札から1枚補充する（あれば）。コストは山札消費のみ。
+      const idx = s.hand.findIndex((h) => h.instanceId === instanceId);
+      if (idx === -1) {
+        this.publish();
+        return;
+      }
+      s.hand.splice(idx, 1);
+      const partId = s.deck.pop();
+      if (partId !== undefined) {
+        s.hand.push({ instanceId: this.nextId(), partId });
+      }
+      s.gachaRemaining = s.deck.length;
+      s.stats.discardUsed += 1;
+      this.checkGameEnd(s);
+      this.publish();
+      return;
+    }
+
+    // タイムアタック：従来の救済（補充プール抽選＋レベル別コスト）。
+    if (this.rescue === null) return;
     const existed = s.hand.some((h) => h.instanceId === instanceId);
     this.rescue.discardAndDraw(s, instanceId, this.rng);
     const removed = existed && !s.hand.some((h) => h.instanceId === instanceId);
@@ -379,8 +451,16 @@ export class SessionManager {
    * むず＝利用不可・残不足・詰みは null（コスト消費なし）。
    */
   useHint(s: GameSession): HandPart[] | null {
-    if (s.phase !== 'playing' || this.rescue === null) return null;
-    const hint = this.rescue.useHint(s);
+    if (s.phase !== 'playing') return null;
+
+    let hint: HandPart[] | null;
+    if (s.gameMode === 'deck') {
+      // 達成型：無料・常時。合体可能な1組を探して返す（無ければ null）。
+      hint = this.combineService.findHint(s.hand, s.level);
+    } else {
+      if (this.rescue === null) return null;
+      hint = this.rescue.useHint(s);
+    }
     if (hint !== null) s.stats.hintUsed += 1;
 
     this.checkGameEnd(s);
@@ -396,17 +476,15 @@ export class SessionManager {
    */
   private checkGameEnd(s: GameSession): void {
     // 呼び出し元（pullGacha/combine/discardAndDraw/useHint）が phase==='playing' を確認済み。
-    // タイムアタックは残回数・詰みでは終了しない（時間切れのみ＝checkTimeout で判定）。
+    // タイムアタックは山札・詰みでは終了しない（時間切れのみ＝checkTimeout で判定）。
     if (s.gameMode === 'timeAttack') return;
-    if (s.hand.length === 0 && s.gachaRemaining === 0) {
-      this.end(s, 'empty_hand');
-      return;
-    }
+    // 達成型（deck）：山札を引ききり、手札0 or 合体不能になったら終了（deck_empty）。
+    if (s.deck.length > 0) return;
     if (
-      s.gachaRemaining === 0 &&
+      s.hand.length === 0 ||
       !this.combineService.canCombineAny(s.hand, s.level)
     ) {
-      this.end(s, 'stuck');
+      this.end(s, 'deck_empty');
     }
   }
 
@@ -443,7 +521,10 @@ export class SessionManager {
    * 図鑑・レベル別ベスト・（デイリーは）デイリーベストを**まとめて永続化**し（書込み集約・機能設計9）、
    * 称号を確定して `GameResult` を返す。
    */
-  end(s: GameSession, reason: 'stuck' | 'empty_hand' | 'timeup'): GameResult {
+  end(
+    s: GameSession,
+    reason: 'stuck' | 'empty_hand' | 'timeup' | 'deck_empty'
+  ): GameResult {
     if (s.phase === 'ended' && this.result !== null) return this.result;
 
     s.phase = 'ended';
@@ -463,6 +544,12 @@ export class SessionManager {
 
     this.persistResults(s);
 
+    // 達成型（deck）の収集実績：完成できた「対象漢字」の異なり数 / 対象総数。
+    const completedTargets = new Set(
+      s.createdKanji.filter((c) => this.deckTargets.has(c))
+    );
+    const completedCount = s.gameMode === 'deck' ? completedTargets.size : 0;
+
     const result: GameResult = {
       level: s.level,
       mode: s.mode,
@@ -474,6 +561,8 @@ export class SessionManager {
       reason,
       durationMs: s.stats.durationMs,
       isNewBest,
+      completedCount,
+      targetTotal: s.targetTotal,
     };
     this.result = result;
     this.publish();

@@ -7,6 +7,8 @@
     gachaRemaining: number;
     /** ガチャ残stat を表示するか。タイムアタックは時間表示に置き換えるため false（既定 true で従来通り）。 */
     showGachaRemaining?: boolean;
+    /** 残数 stat の見出し。達成型（deck）は「山札」、それ以外は「ガチャ残」（既定）。 */
+    remainingLabel?: string;
   }
   let {
     score,
@@ -14,6 +16,7 @@
     comboCount,
     gachaRemaining,
     showGachaRemaining = true,
+    remainingLabel = 'ガチャ残',
   }: Props = $props();
 </script>
 
@@ -30,7 +33,7 @@
   </div>
   {#if showGachaRemaining}
     <div class="stat">
-      <dt>ガチャ残</dt>
+      <dt>{remainingLabel}</dt>
       <dd data-testid="gacha-remaining">{gachaRemaining}</dd>
     </div>
   {/if}

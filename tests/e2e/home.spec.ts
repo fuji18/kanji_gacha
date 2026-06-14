@@ -5,9 +5,10 @@ import { test, expect } from '@playwright/test';
 //  - レベル別ベストスコアを表示
 //  - 図鑑・About・今日のお題へ遷移できる
 
-const LEVELS = ['やさしい', 'ふつう', 'むずかしい'];
+// じっくり（達成型）はやさしい/ふつうの2段（むずかしい廃止・レベル再設計）。
+const LEVELS = ['やさしい', 'ふつう'];
 
-test('3レベルそれぞれ1タップでゲーム開始できる', async ({ page }) => {
+test('各レベルを1タップでゲーム開始できる', async ({ page }) => {
   for (const label of LEVELS) {
     await page.goto('/');
     await expect(

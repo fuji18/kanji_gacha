@@ -6,29 +6,41 @@ import { test, expect, type Page } from '@playwright/test';
 // 決定性は `?seed=` で確保し、終了までヒント合体を繰り返す。
 
 const SEED = 12345;
+// 達成型（deck）の山札は大きいので、E2E では `?deckMax` で短縮して終了（deck_empty）に到達させる。
+const DECK_MAX = 30;
 
 async function startSeeded(page: Page): Promise<void> {
-  await page.goto(`/?seed=${SEED}`);
+  await page.goto(`/?seed=${SEED}&deckMax=${DECK_MAX}`);
   await page.getByRole('button', { name: 'やさしいでゲーム開始' }).click();
   await expect(page.getByRole('button', { name: /ガチャ/ })).toBeVisible();
 }
 
-/** 残が尽きるまでガチャ → ヒント合体を繰り返し、詰み/手札0で Result へ到達させる。 */
+/** 山札を引き、合体可能なら合体・不能なら1枚捨てて循環し、山札枯渇＋手詰まりで Result へ到達させる。 */
 async function playToResult(page: Page): Promise<void> {
   const gacha = page.getByRole('button', { name: /ガチャ/ });
-  for (let i = 0; i < 30; i++) {
-    if (!(await gacha.isEnabled())) break;
-    await gacha.click();
-  }
   const resultHeading = page.getByRole('heading', { name: '結果' });
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 200; i++) {
+    if (await resultHeading.isVisible()) return;
+    // 手札を上限まで（または山札が尽きるまで）補充する。
+    while (
+      (await page.locator('.chip').count()) < 12 &&
+      (await gacha.isEnabled())
+    ) {
+      await gacha.click();
+    }
     if (await resultHeading.isVisible()) return;
     await page.getByRole('button', { name: 'ヒント' }).click();
     const hinted = page.locator('.chip[data-hinted="true"]');
-    if ((await hinted.count()) === 0) break; // 合体不能＝既に終了判定済みのはず
-    for (let j = 0, n = await hinted.count(); j < n; j++)
-      await hinted.nth(j).click();
-    await page.getByRole('button', { name: '合体！' }).click();
+    const n = await hinted.count();
+    if (n >= 2) {
+      for (let j = 0; j < n; j++) await hinted.nth(j).click();
+      await page.getByRole('button', { name: '合体！' }).click();
+    } else {
+      const chips = page.locator('.chip');
+      if ((await chips.count()) === 0) break;
+      await chips.first().click();
+      await page.getByRole('button', { name: '捨てて引き直す' }).click();
+    }
   }
   await expect(resultHeading).toBeVisible();
 }

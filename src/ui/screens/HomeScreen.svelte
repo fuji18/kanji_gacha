@@ -7,15 +7,21 @@
   // SessionManager は App から prop で受け取る（ui→app の依存のみ。domain/data は型も含め直接 import しない）。
   let { sessionManager }: { sessionManager: SessionManager } = $props();
 
-  // レベル定義。id を `as const` のリテラル型に保つことで domain の Level 型を import せずに
-  // `start(level)` へ渡せる（ui→domain 直接依存の禁止に抵触しない）。
+  // じっくり（達成型・山札）レベル定義。むずかしい（joyo）は廃止し、やさしい/ふつうの2段。
+  // id を `as const` のリテラル型に保つことで domain の Level 型を import せずに渡せる。
   const LEVELS = [
-    { id: 'elementary', label: 'やさしい', desc: '小学校で習う漢字' },
-    { id: 'juniorhigh', label: 'ふつう', desc: '中学までに習う漢字' },
-    { id: 'joyo', label: 'むずかしい', desc: '常用漢字すべて' },
+    {
+      id: 'elementary',
+      label: 'やさしい',
+      desc: '小学校で習う漢字を集めて完成',
+    },
+    { id: 'juniorhigh', label: 'ふつう', desc: '中学で習う漢字を集めて完成' },
   ] as const;
 
   type LevelId = (typeof LEVELS)[number]['id'];
+
+  // タイムアタックは常用漢字すべて（joyo スコープ）で行う。
+  const TIME_ATTACK_LEVEL = 'joyo' as const;
 
   // レベル押下で即開始（1タップ）。説明画面を挟まず Game へ遷移する（2タップ以内・F3）。
   function startGame(level: LevelId): void {
@@ -23,7 +29,7 @@
     navigate('game');
   }
 
-  // 今日のお題（daily・T-022）。日付から日替わり固定レベルを決め、ボタンに併記して開始する（PRD F8）。
+  // 今日のお題（daily・T-022）。日付から日替わり固定レベル（elementary/juniorhigh）を決めて開始する。
   // svelte-ignore state_referenced_locally
   const daily = sessionManager.dailyInfo();
   const dailyLabel =
@@ -36,9 +42,9 @@
     navigate('game');
   }
 
-  // タイムアタック（T-027）。実力（速度・知識・連続性）で持ち時間を延ばす別モード。free RNG で開始する。
-  function startTimeAttack(level: LevelId): void {
-    sessionManager.start(level, 'free', 'timeAttack');
+  // タイムアタック（T-027）。常用漢字で、正解すると持ち時間が延びる実力勝負モード。
+  function startTimeAttack(): void {
+    sessionManager.start(TIME_ATTACK_LEVEL, 'free', 'timeAttack');
     navigate('game');
   }
 </script>
@@ -78,24 +84,20 @@
 
   <section class="ta-section">
     <h3 class="ta-title">タイムアタック</h3>
-    <p class="ta-lead">制限時間制。正解すると時間が延びる実力勝負モード。</p>
-    <ul class="ta-levels">
-      {#each LEVELS as lv (lv.id)}
-        <li>
-          <button
-            type="button"
-            class="ta"
-            onclick={() => startTimeAttack(lv.id)}
-            aria-label={`${lv.label}でタイムアタック開始`}
-          >
-            <span class="ta-label">{lv.label}</span>
-            <span class="ta-best"
-              >ベスト {$persistedStore.timeAttackBest[lv.id]}</span
-            >
-          </button>
-        </li>
-      {/each}
-    </ul>
+    <p class="ta-lead">
+      常用漢字すべて。正解すると時間が延びる実力勝負モード。
+    </p>
+    <button
+      type="button"
+      class="ta"
+      onclick={startTimeAttack}
+      aria-label="常用でタイムアタック開始"
+    >
+      <span class="ta-label">常用漢字</span>
+      <span class="ta-best"
+        >ベスト {$persistedStore.timeAttackBest[TIME_ATTACK_LEVEL]}</span
+      >
+    </button>
   </section>
 
   <nav class="actions">
@@ -171,14 +173,6 @@
     font-size: 0.82rem;
     color: #555;
     margin: 0 0 0.6rem;
-  }
-  .ta-levels {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
   }
   .ta {
     width: 100%;
