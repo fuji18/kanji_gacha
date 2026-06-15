@@ -179,6 +179,16 @@ export class SessionManager {
   }
 
   /**
+   * ふりがな表示設定を切り替えて永続化する（T-031）。`persistedStore` を更新して UI に反映する。
+   * セッション外（Home 等）からも呼べる（設定はゲーム進行に依存しない）。
+   */
+  setFurigana(on: boolean): void {
+    this.storage.saveSettings({ ...this.persisted.settings, furigana: on });
+    this.persisted = this.storage.loadState();
+    this.persistedStore.set(this.persisted);
+  }
+
+  /**
    * 「今日のお題」の対象レベルと日付キー（機能設計4.6・F8・T-022）。`now`（注入時刻）から JST 日付を求め、
    * 日替わり固定のレベルを決める。Home が表示（レベル併記・デイリーベスト）と `start(level,'daily')` に使う。
    */

@@ -48,6 +48,26 @@ test('学年選択からもどれる', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('ふりがなトグルをオンにでき、リロード後も保持される（T-031）', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const toggle = page.getByRole('button', { name: /ふりがな/ });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  // ON にすると見出し等にふりがな（ruby）が付く
+  await expect(page.locator('ruby').first()).toBeVisible();
+
+  // リロードしても保持される（localStorage）
+  await page.reload();
+  await expect(page.getByRole('button', { name: /ふりがな/ })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+});
+
 test('今日のお題からゲームへ遷移できる', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /今日のお題/ }).click();

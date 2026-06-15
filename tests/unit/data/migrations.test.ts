@@ -22,7 +22,7 @@ describe('defaultState', () => {
       joyo: 0,
     });
     expect(s.dailyBest).toEqual({});
-    expect(s.settings).toEqual({ hintAlwaysOn: false });
+    expect(s.settings).toEqual({ hintAlwaysOn: false, furigana: false });
   });
 
   it('呼び出しごとに独立したオブジェクトを返す（共有参照しない）', () => {
@@ -87,12 +87,26 @@ describe('migrate 欠損補完・型防御', () => {
     expect(m.bestScores.elementary).toBe(0);
     expect(m.bestScores.joyo).toBe(50);
     expect(m.dailyBest).toEqual({ '20260102': 40 });
-    expect(m.settings).toEqual({ hintAlwaysOn: false });
+    expect(m.settings).toEqual({ hintAlwaysOn: false, furigana: false });
   });
 
   it('settings がオブジェクトでも hintAlwaysOn が非boolなら既定に置換', () => {
     const m = migrate({ schemaVersion: 1, settings: { hintAlwaysOn: 'yes' } });
     expect(m.settings.hintAlwaysOn).toBe(false);
+  });
+
+  it('furigana：旧データ（furigana 無し）は false 補完、bool は保持（T-031）', () => {
+    expect(migrate({ schemaVersion: 1, settings: {} }).settings.furigana).toBe(
+      false
+    );
+    expect(
+      migrate({ schemaVersion: 1, settings: { furigana: true } }).settings
+        .furigana
+    ).toBe(true);
+    expect(
+      migrate({ schemaVersion: 1, settings: { furigana: 'x' } }).settings
+        .furigana
+    ).toBe(false); // 非boolは既定
   });
 
   it('discovered の不正エントリ（欠損フィールド）は捨てる', () => {
