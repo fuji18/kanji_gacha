@@ -110,8 +110,12 @@ export class CombineService {
    * @param level 現在のレベル
    * @returns 成立する組が1つでもあれば true、無ければ false（＝詰み）
    */
-  canCombineAny(hand: HandPart[], level: Level): boolean {
-    return this.firstCombinable(hand, level) !== null;
+  canCombineAny(
+    hand: HandPart[],
+    level: Level,
+    exclude?: ReadonlySet<string>
+  ): boolean {
+    return this.firstCombinable(hand, level, exclude) !== null;
   }
 
   /**
@@ -122,8 +126,12 @@ export class CombineService {
    * @param level 現在のレベル
    * @returns 成立する部品の組（`resolve` で成立を保証）。無ければ null
    */
-  findHint(hand: HandPart[], level: Level): HandPart[] | null {
-    return this.firstCombinable(hand, level);
+  findHint(
+    hand: HandPart[],
+    level: Level,
+    exclude?: ReadonlySet<string>
+  ): HandPart[] | null {
+    return this.firstCombinable(hand, level, exclude);
   }
 
   /**
@@ -132,11 +140,17 @@ export class CombineService {
    * 探索量は手札12・上限5で ΣC(12,k)（k=2..5）≈ 1,573 通り。各判定は `makeKey`→
    * `Map.get` の O(1) で、最初の成立で打ち切るため十分高速（目標5ms以下・機能設計4.5）。
    */
-  private firstCombinable(hand: HandPart[], level: Level): HandPart[] | null {
+  private firstCombinable(
+    hand: HandPart[],
+    level: Level,
+    exclude?: ReadonlySet<string>
+  ): HandPart[] | null {
     const maxSize = Math.min(MAX_COMBINE_PARTS, hand.length);
     for (let size = 2; size <= maxSize; size++) {
       for (const subset of combinations(hand, size)) {
-        if (this.resolve(subset, level)) return subset;
+        const r = this.resolve(subset, level);
+        // 達成型の重複禁止：既出の漢字（exclude）しか作れない組は「有効な手」と見なさない。
+        if (r && !exclude?.has(r.awarded.char)) return subset;
       }
     }
     return null;

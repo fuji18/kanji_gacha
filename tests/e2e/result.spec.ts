@@ -1,49 +1,12 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import { startSmallDeck, playToResult } from './helpers';
 
-// T-019 Result画面の E2E（受け入れ条件）。
-//  - 終了（詰み/手札0）で結果が表示される（スコア・作成漢字・新発見・称号・新記録）
-//  - もう一回/ホームが遷移、シェア（T-023：Web Share / クリップボードフォールバック）が機能する
-// 決定性は `?seed=` で確保し、終了までヒント合体を繰り返す。
+// Result画面の E2E（達成型・小学生モード）。
+//  - 終了で結果が表示される（スコア・作成漢字・新発見・称号・新記録・収集率）
+//  - もう一回/ホーム遷移、シェア（Web Share / クリップボードフォールバック）
+// 決定性は `?seed=`＋出題数5字（小さい山札）で確保する。
 
-const SEED = 12345;
-// 達成型（deck）の山札は大きいので、E2E では `?deckMax` で短縮して終了（deck_empty）に到達させる。
-const DECK_MAX = 30;
-
-async function startSeeded(page: Page): Promise<void> {
-  await page.goto(`/?seed=${SEED}&deckMax=${DECK_MAX}`);
-  await page.getByRole('button', { name: 'やさしいでゲーム開始' }).click();
-  await expect(page.getByRole('button', { name: /ガチャ/ })).toBeVisible();
-}
-
-/** 山札を引き、合体可能なら合体・不能なら1枚捨てて循環し、山札枯渇＋手詰まりで Result へ到達させる。 */
-async function playToResult(page: Page): Promise<void> {
-  const gacha = page.getByRole('button', { name: /ガチャ/ });
-  const resultHeading = page.getByRole('heading', { name: '結果' });
-  for (let i = 0; i < 200; i++) {
-    if (await resultHeading.isVisible()) return;
-    // 手札を上限まで（または山札が尽きるまで）補充する。
-    while (
-      (await page.locator('.chip').count()) < 12 &&
-      (await gacha.isEnabled())
-    ) {
-      await gacha.click();
-    }
-    if (await resultHeading.isVisible()) return;
-    await page.getByRole('button', { name: 'ヒント' }).click();
-    const hinted = page.locator('.chip[data-hinted="true"]');
-    const n = await hinted.count();
-    if (n >= 2) {
-      for (let j = 0; j < n; j++) await hinted.nth(j).click();
-      await page.getByRole('button', { name: '合体！' }).click();
-    } else {
-      const chips = page.locator('.chip');
-      if ((await chips.count()) === 0) break;
-      await chips.first().click();
-      await page.getByRole('button', { name: '捨てて引き直す' }).click();
-    }
-  }
-  await expect(resultHeading).toBeVisible();
-}
+const startSeeded = startSmallDeck;
 
 test('終了すると結果（称号・スコア・作成漢字）が表示される', async ({
   page,
@@ -72,7 +35,7 @@ test('もう一回でゲームへ、ホームでホームへ遷移できる', as
   // ゲーム中断してホームへ戻り、再度終了→ホーム導線も確認
   await page.getByRole('button', { name: 'やめる' }).click();
   await expect(
-    page.getByRole('heading', { name: 'レベルをえらぶ' })
+    page.getByRole('heading', { name: 'モードをえらぶ' })
   ).toBeVisible();
 });
 
@@ -82,13 +45,13 @@ test('結果からホームへ戻れる', async ({ page }) => {
 
   await page.getByRole('button', { name: 'ホーム' }).click();
   await expect(
-    page.getByRole('heading', { name: 'レベルをえらぶ' })
+    page.getByRole('heading', { name: 'モードをえらぶ' })
   ).toBeVisible();
 });
 
-// シェア文面の書式（T-023 / F11）。レベルは startSeeded＝やさしい固定。
+// シェア文面の書式（T-023 / F11）。レベルは startSeeded＝小学生固定。
 const SHARE_TEXT_RE =
-  /^漢字合体ガチャ｜やさしい｜スコア\d+｜作った字：.+ #漢字合体ガチャ$/;
+  /^漢字合体ガチャ｜小学生｜スコア\d+｜作った字：.+ #漢字合体ガチャ$/;
 
 test('Web Share API 対応端末では共有シートが出る（T-023 / F11）', async ({
   page,

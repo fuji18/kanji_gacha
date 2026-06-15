@@ -158,37 +158,35 @@ export class DictionaryRepository {
   }
 
   /**
-   * 達成型（山札）の対象漢字一覧（T: レベル再設計）。`kanji.level === level` かつ
-   * 分解エントリを持つ（＝部品から作れる）漢字のみを返す。収集率の分母に使う。
-   * deck レベル（elementary / juniorhigh）で用いる。
+   * 達成型（山札）の対象漢字一覧（T-028）。`kanji.grade ∈ grades` かつ分解エントリを持つ
+   * （＝部品から作れる）漢字を返す。出題対象の母集合（アプリ層が N 字サンプリングして使う）。
+   *   - 小学生モード：grades = [選択学年] または [1..6]（全学年）
+   *   - 大人モード：grades = [8]（小学生以外の常用）
    */
-  deckTargetKanji(level: Level): string[] {
+  deckTargetKanji(grades: readonly number[]): string[] {
     const index = this.requireDeckIndex();
+    const set = new Set(grades);
     const out: string[] = [];
     for (const k of this.requireKanji().values()) {
-      if (k.level === level && index.has(k.char)) out.push(k.char);
+      if (set.has(k.grade) && index.has(k.char)) out.push(k.char);
     }
     return out;
   }
 
   /**
-   * 達成型（山札）の部品デッキを構築する（T: レベル再設計）。対象レベルの各漢字の代表分解の
-   * 構成部品を**重複ありで全投入**した配列を返す（同一部品が複数漢字に現れれば複数枚入る）。
-   * 順序は未シャッフル（アプリ層が RNG でシャッフルして使う）。
+   * 指定漢字の代表分解の構成部品（Part[]・重複あり）を返す（T-029）。アプリ層が選んだ N 字に対して
+   * 呼び、山札を組み立てる。分解エントリの無い字は空配列。
    */
-  buildDeck(level: Level): Part[] {
-    const index = this.requireDeckIndex();
+  partsForKanji(char: string): Part[] {
+    const entry = this.requireDeckIndex().get(char);
+    if (entry === undefined) return [];
     const parts = this.requirePartById();
-    const deck: Part[] = [];
-    for (const char of this.deckTargetKanji(level)) {
-      const entry = index.get(char);
-      if (entry === undefined) continue;
-      for (const id of entry.key.split('+')) {
-        const part = parts.get(id);
-        if (part !== undefined) deck.push(part);
-      }
+    const out: Part[] = [];
+    for (const id of entry.key.split('+')) {
+      const part = parts.get(id);
+      if (part !== undefined) out.push(part);
     }
-    return deck;
+    return out;
   }
 
   /**

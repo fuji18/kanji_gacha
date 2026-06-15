@@ -44,6 +44,7 @@ const KANJI: KanjiEntry[] = [
     readings: ['はやし'],
     meanings: ['woods'],
     level: 'elementary',
+    grade: 1,
     freqRank: 1500,
   },
   {
@@ -52,6 +53,7 @@ const KANJI: KanjiEntry[] = [
     readings: ['ひん'],
     meanings: ['goods'],
     level: 'elementary',
+    grade: 3,
   },
 ];
 
@@ -162,34 +164,37 @@ describe('DictionaryRepository.load 正常系・O(1)展開', () => {
   });
 });
 
-describe('DictionaryRepository 山札（達成型・レベル再設計）', () => {
-  it('deckTargetKanji は level 一致かつ分解エントリを持つ漢字を返す', async () => {
+describe('DictionaryRepository 山札（達成型・grade 対応）', () => {
+  it('deckTargetKanji は grade 一致かつ分解エントリを持つ漢字を返す', async () => {
     const repo = await loadedRepo();
-    expect(repo.deckTargetKanji('elementary').sort()).toEqual(['品', '林']);
-    expect(repo.deckTargetKanji('juniorhigh')).toEqual([]); // fixture に中学字なし
+    // 林=grade1, 品=grade3（いずれも makeable）
+    expect(repo.deckTargetKanji([1, 3]).sort()).toEqual(['品', '林']);
+    expect(repo.deckTargetKanji([1])).toEqual(['林']);
+    expect(repo.deckTargetKanji([2])).toEqual([]); // grade2 の字なし
+    expect(repo.deckTargetKanji([8])).toEqual([]); // 中学以降なし
   });
 
-  it('buildDeck は各対象漢字の構成部品を重複ありで全投入する', async () => {
+  it('partsForKanji は代表分解の部品を重複ありで返す', async () => {
     const repo = await loadedRepo();
-    const ids = repo
-      .buildDeck('elementary')
-      .map((p) => p.id)
-      .sort();
-    // 林=ki+ki（2枚）, 品=kuchi×3 → 重複ありで合計5枚
-    expect(ids).toEqual(['ki', 'ki', 'kuchi', 'kuchi', 'kuchi']);
+    expect(
+      repo
+        .partsForKanji('林')
+        .map((p) => p.id)
+        .sort()
+    ).toEqual(['ki', 'ki']);
+    expect(
+      repo
+        .partsForKanji('品')
+        .map((p) => p.id)
+        .sort()
+    ).toEqual(['kuchi', 'kuchi', 'kuchi']);
+    expect(repo.partsForKanji('存在しない')).toEqual([]); // 分解なし
   });
 
-  it('buildDeck の各要素は Part（表示情報つき）である', async () => {
-    const repo = await loadedRepo();
-    const deck = repo.buildDeck('elementary');
-    expect(deck).toHaveLength(5);
-    expect(deck.every((p) => typeof p.char === 'string')).toBe(true);
-  });
-
-  it('未ロードで buildDeck / deckTargetKanji は例外', () => {
+  it('未ロードで partsForKanji / deckTargetKanji は例外', () => {
     const repo = new DictionaryRepository(fakeFetch(), '/');
-    expect(() => repo.buildDeck('elementary')).toThrow();
-    expect(() => repo.deckTargetKanji('elementary')).toThrow();
+    expect(() => repo.partsForKanji('林')).toThrow();
+    expect(() => repo.deckTargetKanji([1])).toThrow();
   });
 });
 

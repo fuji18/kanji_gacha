@@ -45,6 +45,16 @@ export interface SessionManagerOptions {
   persistedStore?: Writable<PersistedState>;
 }
 
+/**
+ * レベルから既定の出題対象学年を返す（grades 未指定時のフォールバック・T-028）。
+ * 小学生モード＝小1〜小6、大人モード（juniorhigh 相当）＝中学以降の常用（grade 8）。
+ */
+function defaultGradesForLevel(level: Level): number[] {
+  if (level === 'elementary') return [1, 2, 3, 4, 5, 6];
+  if (level === 'juniorhigh') return [8];
+  return [1, 2, 3, 4, 5, 6, 8]; // joyo（deck では通常未使用のフォールバック）
+}
+
 /** 手札内一意IDの採番器（セッション毎に生成）。決定的（カウンタ）でデイリー再現を壊さない。 */
 function makeIdFactory(): () => string {
   let n = 0;
@@ -214,7 +224,8 @@ export class SessionManager {
   start(
     level: Level,
     mode: 'free' | 'daily',
-    gameMode: GameMode = 'deck'
+    gameMode: GameMode = 'deck',
+    opts: { grades?: number[]; count?: number } = {}
   ): GameSession {
     let seed: number | null = null;
     if (mode === 'daily') {
@@ -240,6 +251,7 @@ export class SessionManager {
     let targetTotal = 0;
     let gachaRemaining = 0;
     let deadlineAtMs: number | null = null;
+    let deckGrades: number[] = [];
 
     if (gameMode === 'timeAttack') {
       // タイムアタック：重み付きプールを母集合に、回数無制限・時間制で引く。
@@ -255,13 +267,22 @@ export class SessionManager {
       gachaRemaining = GACHA_COUNT; // discard コスト用の残（時間制では表示しない）
       deadlineAtMs = this.startedAtMs + this.timeAttackInitialMs;
     } else {
-      // 達成型（deck）：対象レベルの山札を構築・シャッフルし、非復元で引く。
-      const builtDeck = this.dict.buildDeck(level);
-      this.partsById = new Map(builtDeck.map((p) => [p.id, p]));
+      // 達成型（deck・T-028/T-029）：対象学年から出題数 N 字をサンプリングし、
+      // その N 字の部品だけで山札を構築（重複あり）。引きはシャッフルして非復元。
+      deckGrades = opts.grades ?? defaultGradesForLevel(level);
+      const allTargets = this.dict.deckTargetKanji(deckGrades);
+      const requested = opts.count ?? allTargets.length;
+      const n = Math.min(Math.max(1, requested), allTargets.length);
+      const chosen = this.sampleN(allTargets, n);
+      this.deckTargets = new Set(chosen);
+
+      const builtParts: Part[] = [];
+      for (const char of chosen)
+        builtParts.push(...this.dict.partsForKanji(char));
+      this.partsById = new Map(builtParts.map((p) => [p.id, p]));
       this.pool = [];
       this.rescue = null;
-      this.deckTargets = new Set(this.dict.deckTargetKanji(level));
-      deck = this.shuffle(builtDeck.map((p) => p.id));
+      deck = this.shuffle(builtParts.map((p) => p.id));
       // E2E/テスト用に山札枚数を上限で切り詰める（無害なレバー・既定は無制限）。
       if (this.deckLimit !== null && deck.length > this.deckLimit) {
         deck = deck.slice(0, this.deckLimit);
@@ -277,6 +298,7 @@ export class SessionManager {
       seed,
       deck,
       targetTotal,
+      deckGrades,
       gachaRemaining,
       deadlineAtMs,
       lastSuccessAtMs: null,
@@ -300,6 +322,11 @@ export class SessionManager {
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
+  }
+
+  /** 配列から RNG で n 件を非復元サンプリングする（出題数 N 字の選出・T-029）。 */
+  private sampleN(arr: readonly string[], n: number): string[] {
+    return this.shuffle([...arr]).slice(0, n);
   }
 
   /**
@@ -365,6 +392,21 @@ export class SessionManager {
       return miss;
     }
 
+    // 達成型：すでに作成済みの漢字は作れない（重複禁止・T-029）。
+    // 無効（ノーペナルティ）：部品消費なし・コンボ維持・KPI 不変。UI に duplicate を通知。
+    if (
+      s.gameMode === 'deck' &&
+      s.createdKanji.includes(resolved.awarded.char)
+    ) {
+      this.publish();
+      return {
+        success: false,
+        resolved: null,
+        gainedScore: 0,
+        duplicate: true,
+      };
+    }
+
     // 成立：選択部品を手札から除去
     const ids = new Set(sel.map((h) => h.instanceId));
     s.hand = s.hand.filter((h) => !ids.has(h.instanceId));
@@ -417,13 +459,16 @@ export class SessionManager {
     if (s.phase !== 'playing') return;
 
     if (s.gameMode === 'deck') {
-      // 達成型：手札1枚を捨て、山札から1枚補充する（あれば）。コストは山札消費のみ。
+      // 達成型（T-029）：手札1枚を捨てて**山札に戻し**、シャッフルして別の1枚を引く。
+      // 部品を場から失わないため、N字すべてを完成できる状態が保たれる。
       const idx = s.hand.findIndex((h) => h.instanceId === instanceId);
       if (idx === -1) {
         this.publish();
         return;
       }
-      s.hand.splice(idx, 1);
+      const [removed] = s.hand.splice(idx, 1);
+      s.deck.push(removed.partId); // 山札へ返却
+      s.deck = this.shuffle(s.deck); // 戻した札を含めて切り直す
       const partId = s.deck.pop();
       if (partId !== undefined) {
         s.hand.push({ instanceId: this.nextId(), partId });
@@ -455,8 +500,12 @@ export class SessionManager {
 
     let hint: HandPart[] | null;
     if (s.gameMode === 'deck') {
-      // 達成型：無料・常時。合体可能な1組を探して返す（無ければ null）。
-      hint = this.combineService.findHint(s.hand, s.level);
+      // 達成型：無料・常時。既出（作成済み）を除いた、まだ作れる1組を返す（重複は提案しない）。
+      hint = this.combineService.findHint(
+        s.hand,
+        s.level,
+        new Set(s.createdKanji)
+      );
     } else {
       if (this.rescue === null) return null;
       hint = this.rescue.useHint(s);
@@ -478,11 +527,22 @@ export class SessionManager {
     // 呼び出し元（pullGacha/combine/discardAndDraw/useHint）が phase==='playing' を確認済み。
     // タイムアタックは山札・詰みでは終了しない（時間切れのみ＝checkTimeout で判定）。
     if (s.gameMode === 'timeAttack') return;
-    // 達成型（deck）：山札を引ききり、手札0 or 合体不能になったら終了（deck_empty）。
+    // 達成型（deck・T-029）：異なる漢字を N 字作ったらクリア。
+    // 重複禁止により createdKanji は相異なるため、その長さ＝完成した異なり字数。
+    // 対象の部品が別字（代表解）を作る場合もあるため、対象char一致ではなく「作った異なり数」で評価する。
+    if (s.targetTotal > 0 && s.createdKanji.length >= s.targetTotal) {
+      this.end(s, 'deck_empty');
+      return;
+    }
+    // それ以外は、山札を引ききり、手札0 or「まだ作れる新しい字が無い」なら終了（手詰まり）。
     if (s.deck.length > 0) return;
     if (
       s.hand.length === 0 ||
-      !this.combineService.canCombineAny(s.hand, s.level)
+      !this.combineService.canCombineAny(
+        s.hand,
+        s.level,
+        new Set(s.createdKanji)
+      )
     ) {
       this.end(s, 'deck_empty');
     }
@@ -544,11 +604,11 @@ export class SessionManager {
 
     this.persistResults(s);
 
-    // 達成型（deck）の収集実績：完成できた「対象漢字」の異なり数 / 対象総数。
-    const completedTargets = new Set(
-      s.createdKanji.filter((c) => this.deckTargets.has(c))
-    );
-    const completedCount = s.gameMode === 'deck' ? completedTargets.size : 0;
+    // 達成型（deck）の収集実績：作った異なり漢字数 / 出題数 N（N で頭打ち表示）。
+    const completedCount =
+      s.gameMode === 'deck'
+        ? Math.min(s.createdKanji.length, s.targetTotal)
+        : 0;
 
     const result: GameResult = {
       level: s.level,
@@ -563,6 +623,7 @@ export class SessionManager {
       isNewBest,
       completedCount,
       targetTotal: s.targetTotal,
+      deckGrades: [...s.deckGrades],
     };
     this.result = result;
     this.publish();

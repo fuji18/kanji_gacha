@@ -45,6 +45,7 @@ export interface KanjiEntry {
   readings: string[]; // 読み（音・訓）
   meanings: string[]; // 意味（日本語1行表示用）
   level: Level; // 学年区分（単一フィールドでレベル判定）
+  grade: number; // KANJIDIC2 学年（1–6＝小学／8＝中学以降の常用）。学年別出題に使う（T-028）
   freqRank?: number; // 頻度順位（代表解の選定・低いほど一般的）
 }
 
@@ -70,6 +71,7 @@ export interface CombineResult {
   success: boolean;
   resolved: CombineResolved | null; // 成功時のみ
   gainedScore: number; // 今回の加点（成功時のみ非0）
+  duplicate?: boolean; // 達成型：既出の漢字を作ろうとした無効ケース（ノーペナルティ・T-029）
 }
 
 // ===== 実行時ステート（メモリ・機能設計3.2） =====
@@ -107,8 +109,10 @@ export interface GameSession {
   seed: number | null; // daily は dailySeed の整数値（機能設計4.6）。free は null
   // deck モード：残り山札（partId 配列・末尾から非復元で引く）。timeAttack では空。
   deck: string[];
-  // deck モードの達成型分母（対象レベルの完成可能漢字数）。timeAttack では0。
+  // deck モードの達成型分母（出題数 N＝選ばれた対象漢字数）。timeAttack では0。
   targetTotal: number;
+  // deck モードの出題対象学年（小学生＝[選択学年] or [1..6]、大人＝[8]）。timeAttack では空。
+  deckGrades: number[];
   // deck モードの山札残数（= deck.length と同期、UI 表示・canPull 用）。timeAttack では未使用。
   gachaRemaining: number;
   // タイムアタック専用。終了予定の絶対時刻（epoch ms）。deck では null。
@@ -141,6 +145,8 @@ export interface GameResult {
   // deck モードの収集実績（達成型評価）。完成できた対象漢字数 / 対象総数。timeAttack では 0/0。
   completedCount: number;
   targetTotal: number;
+  // deck モードの出題対象学年（「もう一回」で同設定を再現するため）。timeAttack では空。
+  deckGrades: number[];
 }
 
 // ===== 永続データ（localStorage・機能設計3.3） =====

@@ -41,7 +41,15 @@ function part(id: string): Part {
 const PARTS: Part[] = ['ki', 'kuchi', 'onna', 'ko', 'hi'].map(part);
 
 function kanji(char: string, strokes: number): KanjiEntry {
-  return { char, strokes, readings: [], meanings: [], level: 'elementary' };
+  // fixture は全字 grade 1（小学1年）。start の既定 grades=[1..6] で全対象になる。
+  return {
+    char,
+    strokes,
+    readings: [],
+    meanings: [],
+    level: 'elementary',
+    grade: 1,
+  };
 }
 const KANJI: KanjiEntry[] = [
   kanji('林', 8),
@@ -288,26 +296,29 @@ describe('SessionManager 終了判定（deck_empty）', () => {
 });
 
 describe('SessionManager 救済（deck モード）', () => {
-  it('discardAndDraw：手札1枚を捨て山札から1枚補充（枚数不変）・discardUsed++', () => {
+  it('discardAndDraw：捨て札を山札に戻して引き直す（枚数不変・山札総数も不変）・discardUsed++', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
     s.deck = ['ki', 'kuchi'];
     setHand(s, ['onna', 'ko']);
-    sm.discardAndDraw(s, 't0'); // 'onna' を捨てる
+    sm.discardAndDraw(s, 't0'); // 'onna' を捨てる→山札に戻して1枚引く
     expect(s.hand).toHaveLength(2); // 削除1＋補充1
     expect(s.hand.some((h) => h.instanceId === 't0')).toBe(false);
-    expect(s.deck).toHaveLength(1); // 山札を1消費
-    expect(s.gachaRemaining).toBe(1);
+    // 捨て札を山札へ返却（push1）し1枚引く（pop1）ため、山札総数は不変。
+    expect(s.deck).toHaveLength(2);
+    expect(s.gachaRemaining).toBe(2);
     expect(s.stats.discardUsed).toBe(1);
+    // 'onna' は場（手札∪山札）から失われない
+    expect([...s.deck, ...s.hand.map((h) => h.partId)]).toContain('onna');
   });
 
-  it('discardAndDraw：山札空なら補充されず手札が1枚減る', () => {
+  it('discardAndDraw：山札空でも捨て札を戻して引くので手札は減らない', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
     s.deck = [];
     setHand(s, ['ki', 'ki', 'kuchi']);
-    sm.discardAndDraw(s, 't2');
-    expect(s.hand).toHaveLength(2);
+    sm.discardAndDraw(s, 't2'); // 'kuchi' を捨て→山札[kuchi]→引き直し
+    expect(s.hand).toHaveLength(3); // 戻して引くので枚数不変
     expect(s.stats.discardUsed).toBe(1);
   });
 
@@ -345,6 +356,60 @@ describe('SessionManager 救済（deck モード）', () => {
     expect(sm.canUseHint(s)).toBe(true);
     s.phase = 'ended';
     expect(sm.canUseHint(s)).toBe(false);
+  });
+});
+
+describe('SessionManager 重複禁止・出題数（T-029）', () => {
+  it('combine：既出の漢字は無効（ノーペナルティ・部品消費なし・コンボ維持）', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林（1回目・成功）
+    expect(s.createdKanji).toEqual(['林']);
+    expect(s.score.comboCount).toBe(1);
+    const scoreBefore = s.score.score;
+
+    setHand(s, ['ki', 'ki']);
+    const r = sm.combine(s, [...s.hand]); // 林（2回目・既出）
+    expect(r.success).toBe(false);
+    expect(r.duplicate).toBe(true);
+    expect(s.score.score).toBe(scoreBefore); // 加点なし
+    expect(s.score.comboCount).toBe(1); // コンボ維持
+    expect(s.hand).toHaveLength(2); // 部品消費なし
+    expect(s.createdKanji).toEqual(['林']); // 重複追加なし
+    expect(s.stats.combineMiss).toBe(0); // ミス計上もしない
+  });
+
+  it('start：出題数 count で N 字の山札を構築（targetTotal=N・deckGrades 記録）', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free', 'deck', { grades: [1], count: 2 });
+    expect(s.targetTotal).toBe(2); // 対象4字から2字
+    expect(s.deckGrades).toEqual([1]);
+    expect(s.deck.length).toBeGreaterThan(0);
+  });
+
+  it('start：count が対象総数を超える場合は総数に丸める', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free', 'deck', {
+      grades: [1],
+      count: 99,
+    });
+    expect(s.targetTotal).toBe(4); // 対象は4字
+  });
+
+  it('start：grades で対象学年を絞る（fixture に grade2 は無い→対象0）', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free', 'deck', { grades: [2] });
+    expect(s.targetTotal).toBe(0);
+    expect(s.deck).toEqual([]);
+  });
+
+  it('start(2引数) は既定 grades=[1..6]・count=全部 で従来どおりの山札', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    expect(s.gameMode).toBe('deck');
+    expect(s.targetTotal).toBe(TARGET_TOTAL); // 4
+    expect(s.deck).toHaveLength(DECK_SIZE); // 9
   });
 });
 
@@ -574,7 +639,8 @@ describe('SessionManager KPI 計測ログ（1プレイ統合）', () => {
     setHand(s, ['ki', 'kuchi']);
     expect(sm.combine(s, [...s.hand]).success).toBe(false);
 
-    setHand(s, ['ki', 'ki', 'kuchi']);
+    // 既出（林）を除いた、まだ作れる組（好＝ko+onna）をヒントが返す
+    setHand(s, ['ko', 'onna', 'kuchi']);
     expect(sm.useHint(s)).not.toBeNull();
 
     const r = sm.end(s, 'deck_empty');

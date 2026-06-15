@@ -11,9 +11,9 @@
   // レベル表示名（HomeScreen の LEVELS と対応）。result.level は domain の Level 値だが
   // ui→domain 直接依存を避けるため表示名はこのマップで解決する（T-023・F11）。
   const LEVEL_LABELS: Record<string, string> = {
-    elementary: 'やさしい',
-    juniorhigh: 'ふつう',
-    joyo: '常用', // むずかしい廃止。joyo はタイムアタック（常用）の表示に使う
+    elementary: '小学生', // 小学生モード（T-028）
+    juniorhigh: '大人', // 大人モード（小学生以外の常用）
+    joyo: '常用', // タイムアタック（常用すべて）の表示
   };
 
   // 結果はこの画面に来た時点で確定済み（end() 済み）。マウント時に1度だけ取得する。
@@ -33,8 +33,11 @@
 
   function retry(): void {
     if (!result) return;
-    // 同じモード（じっくり/タイムアタック）で再開する（T-027）。
-    sessionManager.start(result.level, result.mode, result.gameMode);
+    // 同じモード・同じ対象学年・同じ出題数で再開する（T-027/T-029）。
+    sessionManager.start(result.level, result.mode, result.gameMode, {
+      grades: result.deckGrades,
+      count: result.targetTotal,
+    });
     navigate('game');
   }
 

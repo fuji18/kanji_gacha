@@ -51,6 +51,7 @@ function buildKanji(raw: RawKanji[]): KanjiEntry[] {
         readings: [...k.on, ...k.kun].slice(0, MAX_READINGS),
         meanings: k.meanings.slice(0, MAX_MEANINGS),
         level: gradeToLevel(k.grade, k.freq),
+        grade: k.grade, // 学年別出題（T-028）。1–6＝小学／8＝中学以降
       };
       // 頻度のある字のみ freqRank を持たせる（selectPrimary の代表解選定に使用）
       if (k.freq != null) entry.freqRank = k.freq;
