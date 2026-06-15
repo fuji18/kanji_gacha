@@ -10,6 +10,7 @@
   import HintButton from '../components/HintButton.svelte';
   import MaterialButton from '../components/MaterialButton.svelte';
   import EmakimonoReveal from '../components/EmakimonoReveal.svelte';
+  import StrokeKanji from '../components/StrokeKanji.svelte';
   import { RARITY_LABELS } from '../labels/rarityLabels';
   import { ParticleField } from '../effects/particleField';
   import '../effects/effects.css';
@@ -60,6 +61,7 @@
     char: string;
     reading: string;
     meaning: string;
+    strokes: number;
     gained: number;
     key: number;
   } | null>(null);
@@ -125,6 +127,7 @@
       char: string;
       readings: string[];
       meanings: string[];
+      strokes: number;
     },
     gained: number
   ): void {
@@ -134,6 +137,7 @@
       char: awarded.char,
       reading: awarded.readings[0] ?? '',
       meaning: awarded.meanings[0] ?? '',
+      strokes: awarded.strokes,
       gained,
       key: floatSeq,
     };
@@ -297,14 +301,19 @@
       {#if floatInfo}
         {#key floatInfo.key}
           <div class="kg-score-float score-float" data-testid="score-float">
-            <span class="sf-char">{floatInfo.char}</span>
-            {#if floatInfo.reading}<span class="sf-yomi"
-                >{floatInfo.reading}</span
-              >{/if}
-            {#if floatInfo.meaning}<span class="sf-mean"
-                >{floatInfo.meaning}</span
-              >{/if}
-            <span class="sf-score">+{floatInfo.gained}</span>
+            <span class="sf-char">
+              <StrokeKanji char={floatInfo.char} size={64} {reducedMotion} />
+            </span>
+            <span class="sf-info">
+              {#if floatInfo.reading}<span class="sf-yomi"
+                  >{floatInfo.reading}</span
+                >{/if}
+              {#if floatInfo.meaning}<span class="sf-mean"
+                  >{floatInfo.meaning}</span
+                >{/if}
+              <span class="sf-strokes">{floatInfo.strokes}画</span>
+              <span class="sf-score">+{floatInfo.gained}</span>
+            </span>
           </div>
         {/key}
       {/if}
@@ -397,7 +406,7 @@
     pointer-events: none;
     z-index: 2;
   }
-  /* スコア/読み・意味の浮上表示（DOM・アクセシビリティ確保）。 */
+  /* 合体成功の学習カード（完成漢字の筆順＋読み・意味・画数・加点。T-030）。 */
   .score-float {
     position: absolute;
     top: 0.5rem;
@@ -406,28 +415,44 @@
     z-index: 3;
     pointer-events: none;
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    align-items: baseline;
+    gap: 0.6rem;
+    align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.85);
-    padding: 0.3rem 0.6rem;
-    border-radius: 0.5rem;
+    background: var(--md-sys-color-surface, rgba(255, 255, 255, 0.92));
+    border: 1px solid var(--md-sys-color-outline-variant, #ddd);
+    box-shadow: var(--md-sys-elevation-2);
+    padding: 0.4rem 0.7rem;
+    border-radius: var(--md-sys-shape-corner-medium, 0.5rem);
   }
+  /* 筆順アニメ（StrokeKanji）の表示枠。 */
   .sf-char {
-    font-size: 1.4rem;
-    font-weight: 700;
+    display: inline-flex;
+    color: var(--md-sys-color-on-surface);
+  }
+  .sf-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    text-align: left;
   }
   .sf-yomi {
-    color: #555;
+    color: var(--md-sys-color-on-surface-variant, #555);
+    font-size: 0.9rem;
   }
   .sf-mean {
-    color: #555;
-    font-size: 0.85rem;
+    color: var(--md-sys-color-on-surface-variant, #555);
+    font-size: 0.8rem;
+  }
+  .sf-strokes {
+    color: var(--md-sys-color-secondary, #2c3e6b);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
   }
   .sf-score {
+    font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
-    color: #2a6;
+    color: var(--md-sys-color-primary, #2a6);
   }
   .organize {
     color: #b00;
