@@ -212,6 +212,10 @@
     if (result.success && result.resolved) {
       feedback = `+${result.gainedScore}！`;
       fireSuccess(result.resolved.awarded, result.gainedScore);
+    } else if (result.duplicate) {
+      // 達成型：既出の漢字（重複）はノーペナルティ。ミス演出は出さない（T-029）。
+      feedback = 'もう作ったよ';
+      floatInfo = null;
     } else {
       feedback = '✕ ミス…';
       floatInfo = null;

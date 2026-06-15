@@ -57,6 +57,6 @@ test('About から戻るでホームへ', async ({ page }) => {
   await page.getByRole('button', { name: 'About' }).click();
   await page.getByRole('button', { name: '戻る' }).click();
   await expect(
-    page.getByRole('heading', { name: 'レベルをえらぶ' })
+    page.getByRole('heading', { name: 'モードをえらぶ' })
   ).toBeVisible();
 });

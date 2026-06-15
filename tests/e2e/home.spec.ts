@@ -1,31 +1,51 @@
 import { test, expect } from '@playwright/test';
 
-// T-016 Home画面の E2E（受け入れ条件）。
-//  - 3レベルを選んでゲーム開始できる（1タップ＝2タップ以内）
-//  - レベル別ベストスコアを表示
-//  - 図鑑・About・今日のお題へ遷移できる
+// Home画面の E2E（レベル再設計＝小学生/大人モード・2段選択）。
+//  - 小学生モード → 学年（7択）→ 出題数 → ゲーム開始
+//  - 大人モード → 出題数 → ゲーム開始
+//  - 今日のお題・図鑑・About 導線
 
-// じっくり（達成型）はやさしい/ふつうの2段（むずかしい廃止・レベル再設計）。
-const LEVELS = ['やさしい', 'ふつう'];
-
-test('各レベルを1タップでゲーム開始できる', async ({ page }) => {
-  for (const label of LEVELS) {
-    await page.goto('/');
-    await expect(
-      page.getByRole('heading', { name: 'レベルをえらぶ' })
-    ).toBeVisible();
-    await page.getByRole('button', { name: `${label}でゲーム開始` }).click();
-    await expect(page.getByRole('heading', { name: 'ゲーム' })).toBeVisible();
-  }
+test('小学生モード→学年→出題数でゲーム開始できる', async ({ page }) => {
+  await page.goto('/');
+  await expect(
+    page.getByRole('heading', { name: 'モードをえらぶ' })
+  ).toBeVisible();
+  await page.getByRole('button', { name: '小学生モードをえらぶ' }).click();
+  await expect(
+    page.getByRole('heading', { name: '学年をえらぶ' })
+  ).toBeVisible();
+  await page.getByRole('button', { name: '小1をえらぶ' }).click();
+  await expect(
+    page.getByRole('heading', { name: '出題数をえらぶ' })
+  ).toBeVisible();
+  await page.getByRole('button', { name: '5字で開始' }).click();
+  await expect(page.getByRole('heading', { name: 'ゲーム' })).toBeVisible();
 });
 
-test('レベル別ベストスコアを表示する', async ({ page }) => {
+test('大人モード→出題数でゲーム開始できる', async ({ page }) => {
   await page.goto('/');
-  // 初期状態（localStorage 空）は各レベルのベストが 0（.level-best はレベルカード分）
-  await expect(page.locator('.level-best')).toHaveCount(LEVELS.length);
-  for (let i = 0; i < LEVELS.length; i++) {
-    await expect(page.locator('.level-best').nth(i)).toHaveText('ベスト 0');
-  }
+  await page.getByRole('button', { name: '大人モードをえらぶ' }).click();
+  await expect(
+    page.getByRole('heading', { name: '出題数をえらぶ' })
+  ).toBeVisible();
+  await page.getByRole('button', { name: '10字で開始' }).click();
+  await expect(page.getByRole('heading', { name: 'ゲーム' })).toBeVisible();
+});
+
+test('モードのベストスコアを表示する', async ({ page }) => {
+  await page.goto('/');
+  // 初期状態（localStorage 空）は各モードのベストが 0（.level-best はモードカード分=2）
+  await expect(page.locator('.level-best')).toHaveCount(2);
+  await expect(page.locator('.level-best').first()).toHaveText('ベスト 0');
+});
+
+test('学年選択からもどれる', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '小学生モードをえらぶ' }).click();
+  await page.getByRole('button', { name: 'もどる' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'モードをえらぶ' })
+  ).toBeVisible();
 });
 
 test('今日のお題からゲームへ遷移できる', async ({ page }) => {

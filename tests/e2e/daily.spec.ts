@@ -22,7 +22,7 @@ test('今日のお題はレベル併記とデイリーベストを表示する',
   const daily = page.getByRole('button', { name: /今日のお題/ });
   await expect(daily).toBeVisible();
   // 対象レベル（やさしい/ふつう/むずかしい のいずれか）が併記される
-  await expect(daily).toContainText(/やさしい|ふつう|むずかしい/);
+  await expect(daily).toContainText(/小学生|大人/);
   // 初回はデイリーベスト 0
   await expect(daily).toContainText('ベスト 0');
 });
