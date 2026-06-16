@@ -179,6 +179,20 @@ export class SessionManager {
   }
 
   /**
+   * 選択部品が作る漢字の表示情報を**副作用なし**で先読みする（段階ヒント・T-033）。
+   * スコア・KPI・手札を変更しない。成立しない選択は null。現在のセッションレベルで判定する。
+   */
+  previewAwarded(
+    sel: HandPart[]
+  ): { char: string; readings: string[]; meanings: string[] } | null {
+    if (this.session === null) return null;
+    const resolved = this.combineService.resolve(sel, this.session.level);
+    if (resolved === null) return null;
+    const { char, readings, meanings } = resolved.awarded;
+    return { char, readings, meanings };
+  }
+
+  /**
    * ふりがな表示設定を切り替えて永続化する（T-031）。`persistedStore` を更新して UI に反映する。
    * セッション外（Home 等）からも呼べる（設定はゲーム進行に依存しない）。
    */

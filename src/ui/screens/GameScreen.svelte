@@ -28,6 +28,9 @@
   let selectedIds = $state<string[]>([]);
   let hintedIds = $state<string[]>([]);
   let feedback = $state('');
+  // 段階ヒント（T-033）：0=未使用 / 1=光る / 2=読み開示 / 3=答え開示。
+  let hintStage = $state(0);
+  let hintInfo = $state<{ char: string; reading: string } | null>(null);
 
   // ---- タイムアタック（T-027）。残時間はUIのティッカーで実時刻から算出し、0で終了判定する ----
   const isTimeAttack = $derived(view?.gameMode === 'timeAttack');
@@ -189,7 +192,7 @@
     const before = new Set(s.hand.map((h) => h.instanceId));
     sessionManager.pullGacha(s);
     selectedIds = []; // 手札が変わるので選択もリセット（他コマンドと一貫）
-    hintedIds = [];
+    resetHint();
     feedback = '';
     floatInfo = null;
 
@@ -226,20 +229,52 @@
       fireMiss();
     }
     selectedIds = [];
-    hintedIds = [];
+    resetHint();
   }
 
+  // 段階ヒント（T-033）：1回押すごとに ①光る → ②読み → ③答え と段階が進む。
+  // useHint（KPI 計上）は最初の1回だけ呼び、以降はキャッシュした組から読み/答えを開示する。
   function doHint(): void {
     const s = sessionManager.getSession();
     if (!s) return;
-    const hint = sessionManager.useHint(s);
-    if (hint === null) {
-      hintedIds = [];
-      feedback = 'ヒントが出せません';
-      return;
+
+    if (hintStage === 0 || hintInfo === null) {
+      // ①最初の押下：合体可能な1組を探して光らせる
+      const hint = sessionManager.useHint(s);
+      if (hint === null) {
+        hintedIds = [];
+        hintStage = 0;
+        hintInfo = null;
+        feedback = 'ヒントが出せません';
+        return;
+      }
+      const sel = s.hand.filter((h) =>
+        hint.some((x) => x.instanceId === h.instanceId)
+      );
+      const awarded = sessionManager.previewAwarded(sel);
+      hintInfo = {
+        char: awarded?.char ?? '',
+        reading: awarded?.readings[0] ?? '',
+      };
+      hintedIds = hint.map((h) => h.instanceId);
+      hintStage = 1;
+      feedback = '光っている部品が合体できます（もう一度で読み）';
+    } else if (hintStage === 1) {
+      // ②読みを開示
+      hintStage = 2;
+      feedback = `読み：${hintInfo.reading || '？'}（もう一度で答え）`;
+    } else {
+      // ③答え（漢字）を開示
+      hintStage = 3;
+      feedback = `答え：${hintInfo.char}`;
     }
-    hintedIds = hint.map((h) => h.instanceId);
-    feedback = '光っている部品が合体できます';
+  }
+
+  /** ヒント段階をリセットする（手札が変わる操作のたびに呼ぶ）。 */
+  function resetHint(): void {
+    hintedIds = [];
+    hintStage = 0;
+    hintInfo = null;
   }
 
   function doDiscard(): void {
@@ -249,7 +284,7 @@
     reveal = null;
     sessionManager.discardAndDraw(s, selectedIds[0]);
     selectedIds = [];
-    hintedIds = [];
+    resetHint();
     feedback = '';
     floatInfo = null;
   }
