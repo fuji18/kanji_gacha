@@ -18,6 +18,13 @@
   function finishTutorial(): void {
     sessionManager.setTutorialDone(true);
   }
+
+  // 文字サイズ拡大（T-037）。ルート（html）の基準サイズを拡大し、rem ベースの UI 全体を一律に拡大する。
+  $effect(() => {
+    document.documentElement.style.fontSize = $persistedStore.settings.largeText
+      ? '118%'
+      : '';
+  });
 </script>
 
 <header class="app-header">

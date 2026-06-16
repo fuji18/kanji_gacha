@@ -92,6 +92,12 @@
   function toggleFurigana(): void {
     sessionManager.setFurigana(!furiganaOn);
   }
+
+  // 文字サイズ拡大（T-037・アクセシビリティ）。
+  const largeTextOn = $derived($persistedStore.settings.largeText);
+  function toggleLargeText(): void {
+    sessionManager.setLargeText(!largeTextOn);
+  }
 </script>
 
 <section class="screen home">
@@ -178,6 +184,12 @@
         class="furigana-toggle"
         aria-pressed={furiganaOn}
         onclick={toggleFurigana}>ふりがな {furiganaOn ? 'ON' : 'OFF'}</button
+      >
+      <button
+        type="button"
+        class="furigana-toggle"
+        aria-pressed={largeTextOn}
+        onclick={toggleLargeText}>文字大 {largeTextOn ? 'ON' : 'OFF'}</button
       >
     </nav>
   {:else if step.kind === 'grade'}

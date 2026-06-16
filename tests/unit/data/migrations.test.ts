@@ -26,6 +26,7 @@ describe('defaultState', () => {
       hintAlwaysOn: false,
       furigana: false,
       tutorialDone: false,
+      largeText: false,
     });
   });
 
@@ -95,6 +96,7 @@ describe('migrate 欠損補完・型防御', () => {
       hintAlwaysOn: false,
       furigana: false,
       tutorialDone: false,
+      largeText: false,
     });
   });
 
