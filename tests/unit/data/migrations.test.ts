@@ -22,7 +22,11 @@ describe('defaultState', () => {
       joyo: 0,
     });
     expect(s.dailyBest).toEqual({});
-    expect(s.settings).toEqual({ hintAlwaysOn: false, furigana: false });
+    expect(s.settings).toEqual({
+      hintAlwaysOn: false,
+      furigana: false,
+      tutorialDone: false,
+    });
   });
 
   it('呼び出しごとに独立したオブジェクトを返す（共有参照しない）', () => {
@@ -87,7 +91,11 @@ describe('migrate 欠損補完・型防御', () => {
     expect(m.bestScores.elementary).toBe(0);
     expect(m.bestScores.joyo).toBe(50);
     expect(m.dailyBest).toEqual({ '20260102': 40 });
-    expect(m.settings).toEqual({ hintAlwaysOn: false, furigana: false });
+    expect(m.settings).toEqual({
+      hintAlwaysOn: false,
+      furigana: false,
+      tutorialDone: false,
+    });
   });
 
   it('settings がオブジェクトでも hintAlwaysOn が非boolなら既定に置換', () => {

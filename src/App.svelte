@@ -1,15 +1,23 @@
 <script lang="ts">
   import type { SessionManager } from './app/SessionManager';
   import { routeStore } from './app/stores/routeStore';
+  import { persistedStore } from './app/stores/persistedStore';
   import HomeScreen from './ui/screens/HomeScreen.svelte';
   import GameScreen from './ui/screens/GameScreen.svelte';
   import ResultScreen from './ui/screens/ResultScreen.svelte';
   import ZukanScreen from './ui/screens/ZukanScreen.svelte';
   import AboutScreen from './ui/screens/AboutScreen.svelte';
+  import TutorialOverlay from './ui/screens/TutorialOverlay.svelte';
 
   // ルートコンポーネント（T-015）。`routeStore` を購読して現在画面をレンダリングする。
   // SessionManager は必要な画面へ prop で渡す（T-016: Home。Game/Result は各担当チケットで追加）。
   let { sessionManager }: { sessionManager: SessionManager } = $props();
+
+  // 初回チュートリアル（T-034）。未完了なら起動時にガイドを表示し、完了/スキップで永続化する。
+  const showTutorial = $derived(!$persistedStore.settings.tutorialDone);
+  function finishTutorial(): void {
+    sessionManager.setTutorialDone(true);
+  }
 </script>
 
 <header class="app-header">
@@ -32,6 +40,10 @@
     <HomeScreen {sessionManager} />
   {/if}
 </main>
+
+{#if showTutorial}
+  <TutorialOverlay ondone={finishTutorial} />
+{/if}
 
 <style>
   .app-header {

@@ -148,7 +148,7 @@ function emptyState(): PersistedState {
     bestScores: { elementary: 0, juniorhigh: 0, joyo: 0 },
     timeAttackBest: { elementary: 0, juniorhigh: 0, joyo: 0 },
     dailyBest: {},
-    settings: { hintAlwaysOn: false, furigana: false },
+    settings: { hintAlwaysOn: false, furigana: false, tutorialDone: false },
     schemaVersion: 1,
   };
 }
