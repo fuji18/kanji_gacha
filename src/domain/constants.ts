@@ -75,3 +75,16 @@ export const TIME_ATTACK = {
   speedBonusMs: 2_000, // 速攻ボーナス（+2秒）
   missPenaltyMs: 2_000, // ミス時の減算（-2秒）
 } as const;
+
+/**
+ * にがて漢字＆復習モードの簡易SRSパラメータ（暫定・要調整 T-035／
+ * docs/ideas/レベル設計と学習機能.md §2・§6(5)）。
+ * 達成型セッション終了時、対象字の完成/未完成で にがて度（重み）を増減する。
+ *  - 未完成で終わった対象字 → 重み +failDelta（weightMax で頭打ち＝にがて登録）
+ *  - 完成できた対象字 → 重み -successDelta（0以下で にがて から外す＝定着）
+ * 復習モードは重みの大きい字を優先出題する。 */
+export const REVIEW = {
+  weightMax: 5, // にがて度の上限（出やすさの天井）
+  failDelta: 2, // 未完成で増える量
+  successDelta: 1, // 完成で減る量（複数回の正解で定着＝外れる）
+} as const;
