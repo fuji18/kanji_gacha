@@ -13,6 +13,9 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: 'on-first-retry',
+    // 既定で初回チュートリアル（T-034）を「済」にしてからテストする（通常 E2E を妨げない）。
+    // チュートリアル自体のテストは spec 側で storageState を空に上書きする。
+    storageState: './tests/e2e/storage-state.json',
   },
   projects: [
     {

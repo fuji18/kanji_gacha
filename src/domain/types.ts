@@ -163,6 +163,7 @@ export interface ZukanState {
 export interface Settings {
   hintAlwaysOn: boolean; // やさしいでの常時ヒント等
   furigana: boolean; // UI見出し等にふりがなを表示する（学習配慮・T-031）
+  tutorialDone: boolean; // 初回チュートリアルを完了/スキップ済みか（T-034）
 }
 
 /** localStorage に永続化する全体状態 */
