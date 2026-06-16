@@ -26,7 +26,12 @@ export function defaultState(): PersistedState {
     bestScores: { elementary: 0, juniorhigh: 0, joyo: 0 },
     timeAttackBest: { elementary: 0, juniorhigh: 0, joyo: 0 },
     dailyBest: {},
-    settings: { hintAlwaysOn: false, furigana: false, tutorialDone: false },
+    settings: {
+      hintAlwaysOn: false,
+      furigana: false,
+      tutorialDone: false,
+      largeText: false,
+    },
     schemaVersion: CURRENT_SCHEMA_VERSION,
   };
 }
@@ -129,6 +134,8 @@ function normalizeSettings(raw: unknown, fallback: Settings): Settings {
       typeof raw.tutorialDone === 'boolean'
         ? raw.tutorialDone
         : fallback.tutorialDone,
+    largeText:
+      typeof raw.largeText === 'boolean' ? raw.largeText : fallback.largeText,
   };
 }
 
