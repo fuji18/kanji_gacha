@@ -153,6 +153,7 @@ function emptyState(): PersistedState {
       furigana: false,
       tutorialDone: false,
       largeText: false,
+      tts: true,
     },
     schemaVersion: 1,
   };
@@ -612,6 +613,15 @@ describe('SessionManager ふりがな設定（T-031）', () => {
     sm.setLargeText(true);
     expect(get(persistedStore).settings.largeText).toBe(true);
     expect(storage.loadState().settings.largeText).toBe(true);
+  });
+
+  it('setTts は設定を永続化し persistedStore を更新する（T-032・既定ON）', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    const { sm, persistedStore } = makeSM(storage);
+    expect(get(persistedStore).settings.tts).toBe(true);
+    sm.setTts(false);
+    expect(get(persistedStore).settings.tts).toBe(false);
+    expect(storage.loadState().settings.tts).toBe(false);
   });
 });
 

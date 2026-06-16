@@ -31,4 +31,9 @@ test('合体で新規発見すると図鑑の収集数が増える（F7）', asy
   await expect(page.getByTestId('discovered-grid')).toBeVisible();
   const collected = Number(await page.getByTestId('collected').textContent());
   expect(collected).toBeGreaterThan(0);
+
+  // 読み上げ（T-032・既定ON）：発見カードに読み上げボタンが出る
+  await expect(
+    page.getByRole('button', { name: /読み上げ/ }).first()
+  ).toBeVisible();
 });

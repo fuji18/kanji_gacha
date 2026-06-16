@@ -11,6 +11,7 @@
   import MaterialButton from '../components/MaterialButton.svelte';
   import EmakimonoReveal from '../components/EmakimonoReveal.svelte';
   import StrokeKanji from '../components/StrokeKanji.svelte';
+  import SpeakButton from '../components/SpeakButton.svelte';
   import { RARITY_LABELS } from '../labels/rarityLabels';
   import { ParticleField } from '../effects/particleField';
   import '../effects/effects.css';
@@ -341,7 +342,10 @@
             </span>
             <span class="sf-info">
               {#if floatInfo.reading}<span class="sf-yomi"
-                  >{floatInfo.reading}</span
+                  >{floatInfo.reading}<SpeakButton
+                    text={floatInfo.reading}
+                    label={`${floatInfo.char}を読み上げ`}
+                  /></span
                 >{/if}
               {#if floatInfo.meaning}<span class="sf-mean"
                   >{floatInfo.meaning}</span
