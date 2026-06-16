@@ -23,6 +23,7 @@ import { ScoreService } from '../domain/score/ScoreService';
 import { computeExtensionMs } from '../domain/timeattack/timeAttack';
 import { RescueService } from '../domain/rescue/RescueService';
 import { resolveRank } from '../domain/rank/resolveRank';
+import { selectReviewTargets, updateWeakKanji } from '../domain/review/srs';
 import { mulberry32 } from '../domain/rng/mulberry32';
 import { dailyLevel, dailySeed, todayYmdJst } from '../domain/rng/dailySeed';
 import type { Rng } from '../domain/rng/Rng';
@@ -266,7 +267,7 @@ export class SessionManager {
     level: Level,
     mode: 'free' | 'daily',
     gameMode: GameMode = 'deck',
-    opts: { grades?: number[]; count?: number } = {}
+    opts: { grades?: number[]; count?: number; review?: boolean } = {}
   ): GameSession {
     let seed: number | null = null;
     if (mode === 'daily') {
@@ -308,13 +309,29 @@ export class SessionManager {
       gachaRemaining = GACHA_COUNT; // discard コスト用の残（時間制では表示しない）
       deadlineAtMs = this.startedAtMs + this.timeAttackInitialMs;
     } else {
-      // 達成型（deck・T-028/T-029）：対象学年から出題数 N 字をサンプリングし、
-      // その N 字の部品だけで山札を構築（重複あり）。引きはシャッフルして非復元。
-      deckGrades = opts.grades ?? defaultGradesForLevel(level);
-      const allTargets = this.dict.deckTargetKanji(deckGrades);
-      const requested = opts.count ?? allTargets.length;
-      const n = Math.min(Math.max(1, requested), allTargets.length);
-      const chosen = this.sampleN(allTargets, n);
+      // 達成型（deck・T-028/T-029/T-035）：対象字を選び、その部品だけで山札を構築（重複あり）。
+      // 引きはシャッフルして非復元。対象の選び方は通常（学年サンプリング）と復習（にがて優先）で分岐する。
+      let chosen: string[];
+      if (opts.review === true) {
+        // 復習モード（T-035）：にがて漢字のうち作れる字を、重み優先で出題対象に選ぶ。
+        // 学年に依存しないため deckGrades は空（Result の「もう一回」は review フラグで再現する）。
+        const weak = this.persisted.weakKanji;
+        const candidates = Object.keys(weak).filter(
+          (char) => this.dict.partsForKanji(char).length > 0
+        );
+        const requested = opts.count ?? candidates.length;
+        // 通常 deck（下限1）と異なり 0 を許容するのは意図的：作れるにがて字が無ければ
+        // 空セッション（targetTotal=0・即 deck_empty 終了）にフォールバックする。
+        // Home は weakCount>0 を事前確認するが、全字が分解エントリ非保持の場合の安全策。
+        const n = Math.min(Math.max(0, requested), candidates.length);
+        chosen = selectReviewTargets(weak, candidates, n, this.rng);
+      } else {
+        deckGrades = opts.grades ?? defaultGradesForLevel(level);
+        const allTargets = this.dict.deckTargetKanji(deckGrades);
+        const requested = opts.count ?? allTargets.length;
+        const n = Math.min(Math.max(1, requested), allTargets.length);
+        chosen = this.sampleN(allTargets, n);
+      }
       this.deckTargets = new Set(chosen);
 
       const builtParts: Part[] = [];
@@ -336,6 +353,7 @@ export class SessionManager {
       level,
       mode,
       gameMode,
+      isReview: gameMode === 'deck' && opts.review === true,
       seed,
       deck,
       targetTotal,
@@ -655,6 +673,7 @@ export class SessionManager {
       level: s.level,
       mode: s.mode,
       gameMode: s.gameMode,
+      isReview: s.isReview,
       score: s.score.score,
       rank: resolveRank(s.score.score),
       createdKanji: [...s.createdKanji],
@@ -689,6 +708,14 @@ export class SessionManager {
       if (s.mode === 'daily') {
         this.storage.saveDailyBest(todayYmdJst(this.now()), s.score.score);
       }
+      // 達成型（deck）のみ：にがて漢字を更新する（T-035）。未完成の対象字は にがて 登録、
+      // 完成できた対象字は定着で重みを下げる。復習・通常どちらの達成型でも更新する。
+      const nextWeak = updateWeakKanji(
+        this.persisted.weakKanji,
+        [...this.deckTargets],
+        s.createdKanji
+      );
+      this.storage.saveWeakKanji(nextWeak);
     }
 
     // 永続ビューを最新化（図鑑/ベストの読み取りビュー）

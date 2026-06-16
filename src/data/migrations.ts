@@ -26,6 +26,7 @@ export function defaultState(): PersistedState {
     bestScores: { elementary: 0, juniorhigh: 0, joyo: 0 },
     timeAttackBest: { elementary: 0, juniorhigh: 0, joyo: 0 },
     dailyBest: {},
+    weakKanji: {},
     settings: {
       hintAlwaysOn: false,
       furigana: false,
@@ -67,6 +68,8 @@ export function migrate(parsed: unknown): PersistedState {
       base.timeAttackBest
     ),
     dailyBest: normalizeNumberMap(parsed.dailyBest),
+    // T-035：旧データ（weakKanji 無し）は {} 補完される（後方互換・版上げ不要）。数値以外は除外。
+    weakKanji: normalizeNumberMap(parsed.weakKanji),
     settings: normalizeSettings(parsed.settings, base.settings),
     // 「常に最新スキーマを返す」契約に従い、未知の将来版も含め常に現行版へ確定する
     // （将来版を保持して書き戻すと、後日その版の移行段が走らず“偽の最新”になるため）。

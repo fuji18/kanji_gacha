@@ -115,6 +115,18 @@ describe('StorageRepository ベスト/デイリーベスト更新（F9）', () =
     );
   });
 
+  it('saveWeakKanji は にがて重みを保存し、別インスタンスで保持される（T-035）', () => {
+    const storage = new MemoryStorage();
+    const repo = new StorageRepository(storage);
+    repo.saveWeakKanji({ 林: 4, 好: 2 });
+    expect(repo.loadState().weakKanji).toEqual({ 林: 4, 好: 2 });
+    // リロード相当
+    expect(new StorageRepository(storage).loadState().weakKanji).toEqual({
+      林: 4,
+      好: 2,
+    });
+  });
+
   it('saveDailyBest は日付ごとに最大値を保持', () => {
     const storage = new MemoryStorage();
     const repo = new StorageRepository(storage);

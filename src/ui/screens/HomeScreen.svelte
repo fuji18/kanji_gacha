@@ -87,6 +87,14 @@
     navigate('game');
   }
 
+  // 復習モード（T-035）。にがて漢字（未完成で終わった字）を優先して出題する達成型。
+  // にがて字が1つ以上あるときだけ入口を出す。常用スコープ（joyo）でどの学年の字も解決可能にする。
+  const weakCount = $derived(Object.keys($persistedStore.weakKanji).length);
+  function startReview(): void {
+    sessionManager.start('joyo', 'free', 'deck', { review: true });
+    navigate('game');
+  }
+
   // ふりがな表示設定（T-031）。低学年向けに UI 文言へふりがなを付ける。
   const furiganaOn = $derived($persistedStore.settings.furigana);
   function toggleFurigana(): void {
@@ -174,6 +182,31 @@
       </button>
     </section>
 
+    {#if weakCount > 0}
+      <section class="review-section">
+        <h3 class="review-title">
+          <Furigana text="復習" reading="ふくしゅう" />モード
+        </h3>
+        <p class="review-lead">
+          まだ作れていない<Furigana
+            text="苦手"
+            reading="にがて"
+          />な漢字を、優先して出題します。
+        </p>
+        <button
+          type="button"
+          class="review"
+          onclick={startReview}
+          aria-label={`苦手な漢字${weakCount}字を復習する`}
+        >
+          <span class="review-label"
+            ><Furigana text="苦手" reading="にがて" />な漢字を復習</span
+          >
+          <span class="review-count">{weakCount}字</span>
+        </button>
+      </section>
+    {/if}
+
     <nav class="actions">
       <button type="button" onclick={() => navigate('zukan')}
         ><Furigana text="図鑑" reading="ずかん" /></button
@@ -236,10 +269,11 @@
     font-size: var(--md-sys-typescale-headline-size);
     color: var(--md-sys-color-on-surface);
   }
-  /* 和紙カードの共通装飾（レベル札・今日のお題・タイムアタック）。 */
+  /* 和紙カードの共通装飾（レベル札・今日のお題・タイムアタック・復習）。 */
   .level,
   .daily,
-  .ta {
+  .ta,
+  .review {
     width: 100%;
     background: linear-gradient(
       160deg,
@@ -257,7 +291,8 @@
   }
   .level:hover,
   .daily:hover,
-  .ta:hover {
+  .ta:hover,
+  .review:hover {
     transform: translateY(-1px);
     box-shadow: var(--md-sys-elevation-2);
   }
@@ -351,6 +386,39 @@
     white-space: nowrap;
     color: var(--md-sys-color-on-surface-variant);
   }
+  .review-section {
+    margin: 1.5rem 0 0;
+  }
+  .review-title {
+    font-family: var(--md-ref-typeface-brand);
+    font-size: var(--md-sys-typescale-title-size);
+    color: var(--md-sys-color-on-surface);
+    margin: 0 0 0.2rem;
+  }
+  .review-lead {
+    font-size: var(--md-sys-typescale-label-size);
+    color: var(--md-sys-color-on-surface-variant);
+    margin: 0 0 0.6rem;
+  }
+  .review {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1.1rem;
+    /* 復習は学び直しの色＝藍（secondary）アクセント。 */
+    border-left: 6px solid var(--md-sys-color-secondary);
+  }
+  .review-label {
+    font-family: var(--md-ref-typeface-brand);
+    font-weight: 700;
+    color: var(--md-sys-color-on-surface);
+  }
+  .review-count {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--md-sys-color-on-surface-variant);
+  }
   .step-title {
     font-family: var(--md-ref-typeface-brand);
     color: var(--md-sys-color-primary);
@@ -393,6 +461,7 @@
     .level,
     .daily,
     .ta,
+    .review,
     .pick {
       transition: none;
     }
