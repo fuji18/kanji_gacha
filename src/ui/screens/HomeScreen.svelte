@@ -106,6 +106,12 @@
   function toggleLargeText(): void {
     sessionManager.setLargeText(!largeTextOn);
   }
+
+  // 読み上げ（音声・T-032）。
+  const ttsOn = $derived($persistedStore.settings.tts);
+  function toggleTts(): void {
+    sessionManager.setTts(!ttsOn);
+  }
 </script>
 
 <section class="screen home">
@@ -223,6 +229,12 @@
         class="furigana-toggle"
         aria-pressed={largeTextOn}
         onclick={toggleLargeText}>文字大 {largeTextOn ? 'ON' : 'OFF'}</button
+      >
+      <button
+        type="button"
+        class="furigana-toggle"
+        aria-pressed={ttsOn}
+        onclick={toggleTts}>音声 {ttsOn ? 'ON' : 'OFF'}</button
       >
     </nav>
   {:else if step.kind === 'grade'}

@@ -220,6 +220,13 @@ export class SessionManager {
     this.persistedStore.set(this.persisted);
   }
 
+  /** 読み上げ（音声）設定を切り替えて永続化する（T-032）。`persistedStore` を更新する。 */
+  setTts(on: boolean): void {
+    this.storage.saveSettings({ ...this.persisted.settings, tts: on });
+    this.persisted = this.storage.loadState();
+    this.persistedStore.set(this.persisted);
+  }
+
   /**
    * 「今日のお題」の対象レベルと日付キー（機能設計4.6・F8・T-022）。`now`（注入時刻）から JST 日付を求め、
    * 日替わり固定のレベルを決める。Home が表示（レベル併記・デイリーベスト）と `start(level,'daily')` に使う。

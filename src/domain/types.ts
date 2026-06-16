@@ -169,6 +169,7 @@ export interface Settings {
   furigana: boolean; // UI見出し等にふりがなを表示する（学習配慮・T-031）
   tutorialDone: boolean; // 初回チュートリアルを完了/スキップ済みか（T-034）
   largeText: boolean; // 文字サイズ拡大（アクセシビリティ・T-037）
+  tts: boolean; // 読み上げ（音声）を有効にする（T-032）
 }
 
 /** localStorage に永続化する全体状態 */

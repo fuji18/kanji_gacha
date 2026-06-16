@@ -46,10 +46,11 @@ export async function playToResult(page: Page): Promise<void> {
   const result = page.getByRole('heading', { name: '結果' });
   for (let i = 0; i < 300; i++) {
     if (await result.isVisible()) return;
-    while (
-      (await page.locator('.chip').count()) < 12 &&
-      (await gacha.isEnabled())
-    ) {
+    while ((await page.locator('.chip').count()) < 12) {
+      // ガチャでゲームが終了するとボタンが消えるため、毎回 結果遷移と存在を確認してから引く
+      // （消えたボタンへの isEnabled は auto-wait でハングするのを避ける）。
+      if (await result.isVisible()) return;
+      if ((await gacha.count()) === 0 || !(await gacha.isEnabled())) break;
       await gacha.click();
     }
     if (await result.isVisible()) return;

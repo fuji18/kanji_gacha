@@ -28,6 +28,7 @@ describe('defaultState', () => {
       furigana: false,
       tutorialDone: false,
       largeText: false,
+      tts: true,
     });
   });
 
@@ -108,6 +109,7 @@ describe('migrate 欠損補完・型防御', () => {
       furigana: false,
       tutorialDone: false,
       largeText: false,
+      tts: true,
     });
   });
 

@@ -2,6 +2,7 @@
   import type { SessionManager } from '../../app/SessionManager';
   import { navigate } from '../../app/stores/routeStore';
   import { persistedStore } from '../../app/stores/persistedStore';
+  import SpeakButton from '../components/SpeakButton.svelte';
 
   // 図鑑画面（T-020 / PRD F7）。発見漢字の一覧と収集率を表示する。
   // 漢字の読み/意味と到達可能N は SessionManager 経由で取得（ui→data 直接アクセス回避）。
@@ -65,6 +66,10 @@
       {#each discovered as item (item.char)}
         <li class="card">
           <span class="card-char">{item.char}</span>
+          <SpeakButton
+            text={item.readings[0] ?? item.char}
+            label={`${item.char}を読み上げ`}
+          />
           {#if item.count > 1}<span class="card-count">×{item.count}</span>{/if}
           {#if item.readings.length > 0}
             <span class="card-yomi">{item.readings.slice(0, 2).join('・')}</span

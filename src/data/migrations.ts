@@ -32,6 +32,7 @@ export function defaultState(): PersistedState {
       furigana: false,
       tutorialDone: false,
       largeText: false,
+      tts: true, // 読み上げは既定で有効（T-032）
     },
     schemaVersion: CURRENT_SCHEMA_VERSION,
   };
@@ -139,6 +140,7 @@ function normalizeSettings(raw: unknown, fallback: Settings): Settings {
         : fallback.tutorialDone,
     largeText:
       typeof raw.largeText === 'boolean' ? raw.largeText : fallback.largeText,
+    tts: typeof raw.tts === 'boolean' ? raw.tts : fallback.tts,
   };
 }
 
