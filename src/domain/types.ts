@@ -162,6 +162,7 @@ export interface ZukanState {
 /** ユーザー設定（UI設計で拡張） */
 export interface Settings {
   hintAlwaysOn: boolean; // やさしいでの常時ヒント等
+  furigana: boolean; // UI見出し等にふりがなを表示する（学習配慮・T-031）
 }
 
 /** localStorage に永続化する全体状態 */

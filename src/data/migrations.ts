@@ -26,7 +26,7 @@ export function defaultState(): PersistedState {
     bestScores: { elementary: 0, juniorhigh: 0, joyo: 0 },
     timeAttackBest: { elementary: 0, juniorhigh: 0, joyo: 0 },
     dailyBest: {},
-    settings: { hintAlwaysOn: false },
+    settings: { hintAlwaysOn: false, furigana: false },
     schemaVersion: CURRENT_SCHEMA_VERSION,
   };
 }
@@ -123,6 +123,8 @@ function normalizeSettings(raw: unknown, fallback: Settings): Settings {
       typeof raw.hintAlwaysOn === 'boolean'
         ? raw.hintAlwaysOn
         : fallback.hintAlwaysOn,
+    furigana:
+      typeof raw.furigana === 'boolean' ? raw.furigana : fallback.furigana,
   };
 }
 

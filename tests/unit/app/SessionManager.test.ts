@@ -148,7 +148,7 @@ function emptyState(): PersistedState {
     bestScores: { elementary: 0, juniorhigh: 0, joyo: 0 },
     timeAttackBest: { elementary: 0, juniorhigh: 0, joyo: 0 },
     dailyBest: {},
-    settings: { hintAlwaysOn: false },
+    settings: { hintAlwaysOn: false, furigana: false },
     schemaVersion: 1,
   };
 }
@@ -585,6 +585,19 @@ describe('SessionManager 既定依存・終了後ガード', () => {
     sm.discardAndDraw(s, 't0');
     expect(sm.useHint(s)).toBeNull();
     expect(s.stats.combineSuccess).toBe(1);
+  });
+});
+
+describe('SessionManager ふりがな設定（T-031）', () => {
+  it('setFurigana は設定を永続化し persistedStore を更新する', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    const { sm, persistedStore } = makeSM(storage);
+    expect(get(persistedStore).settings.furigana).toBe(false);
+    sm.setFurigana(true);
+    expect(get(persistedStore).settings.furigana).toBe(true);
+    expect(storage.loadState().settings.furigana).toBe(true); // 永続化
+    sm.setFurigana(false);
+    expect(get(persistedStore).settings.furigana).toBe(false);
   });
 });
 

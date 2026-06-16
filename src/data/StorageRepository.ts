@@ -1,4 +1,9 @@
-import type { Level, PersistedState, ZukanState } from '../domain/types';
+import type {
+  Level,
+  PersistedState,
+  Settings,
+  ZukanState,
+} from '../domain/types';
 import { defaultState, migrate, STORAGE_KEY } from './migrations';
 
 /**
@@ -102,6 +107,12 @@ export class StorageRepository {
   saveDailyBest(date: string, score: number): void {
     if (score <= (this.state.dailyBest[date] ?? 0)) return;
     this.state.dailyBest[date] = score;
+    this.persist();
+  }
+
+  /** ユーザー設定を保存する（T-031 ふりがな等）。 */
+  saveSettings(settings: Settings): void {
+    this.state.settings = { ...settings };
     this.persist();
   }
 

@@ -2,6 +2,7 @@
   import type { SessionManager } from '../../app/SessionManager';
   import { navigate } from '../../app/stores/routeStore';
   import { persistedStore } from '../../app/stores/persistedStore';
+  import Furigana from '../components/Furigana.svelte';
 
   // Home 画面（T-016 / PRD F3・F9）。レベル選択とエントリ導線を提供する。
   // SessionManager は App から prop で受け取る（ui→app の依存のみ。domain/data は型も含め直接 import しない）。
@@ -85,6 +86,12 @@
     sessionManager.start(TIME_ATTACK_LEVEL, 'free', 'timeAttack');
     navigate('game');
   }
+
+  // ふりがな表示設定（T-031）。低学年向けに UI 文言へふりがなを付ける。
+  const furiganaOn = $derived($persistedStore.settings.furigana);
+  function toggleFurigana(): void {
+    sessionManager.setFurigana(!furiganaOn);
+  }
 </script>
 
 <section class="screen home">
@@ -99,7 +106,9 @@
           onclick={toGrade}
           aria-label="小学生モードをえらぶ"
         >
-          <span class="level-label">小学生モード</span>
+          <span class="level-label"
+            ><Furigana text="小学生" reading="しょうがくせい" />モード</span
+          >
           <span class="level-desc">小学校で習う漢字を学年ごとに完成</span>
           <span class="level-best"
             >ベスト {$persistedStore.bestScores.elementary}</span
@@ -113,7 +122,9 @@
           onclick={toAdultCount}
           aria-label="大人モードをえらぶ"
         >
-          <span class="level-label">大人モード</span>
+          <span class="level-label"
+            ><Furigana text="大人" reading="おとな" />モード</span
+          >
           <span class="level-desc"
             >小学生漢字以外のすべて（中学以降の常用）</span
           >
@@ -130,7 +141,9 @@
       onclick={startDaily}
       aria-label={`今日のお題（${dailyLabel}）でゲーム開始`}
     >
-      <span class="daily-title">今日のお題</span>
+      <span class="daily-title"
+        ><Furigana text="今日のお題" reading="きょうのおだい" /></span
+      >
       <span class="daily-level">{dailyLabel}</span>
       <span class="daily-best">ベスト {dailyBest}</span>
     </button>
@@ -146,7 +159,9 @@
         onclick={startTimeAttack}
         aria-label="常用でタイムアタック開始"
       >
-        <span class="ta-label">常用漢字</span>
+        <span class="ta-label"
+          ><Furigana text="常用漢字" reading="じょうようかんじ" /></span
+        >
         <span class="ta-best"
           >ベスト {$persistedStore.timeAttackBest[TIME_ATTACK_LEVEL]}</span
         >
@@ -154,11 +169,19 @@
     </section>
 
     <nav class="actions">
-      <button type="button" onclick={() => navigate('zukan')}>図鑑</button>
+      <button type="button" onclick={() => navigate('zukan')}
+        ><Furigana text="図鑑" reading="ずかん" /></button
+      >
       <button type="button" onclick={() => navigate('about')}>About</button>
+      <button
+        type="button"
+        class="furigana-toggle"
+        aria-pressed={furiganaOn}
+        onclick={toggleFurigana}>ふりがな {furiganaOn ? 'ON' : 'OFF'}</button
+      >
     </nav>
   {:else if step.kind === 'grade'}
-    <h2>学年をえらぶ</h2>
+    <h2><Furigana text="学年" reading="がくねん" />をえらぶ</h2>
     <ul class="picker">
       {#each GRADES as g (g.label)}
         <li>
@@ -175,7 +198,7 @@
       <button type="button" onclick={back}>もどる</button>
     </nav>
   {:else}
-    <h2>出題数をえらぶ</h2>
+    <h2><Furigana text="出題数" reading="しゅつだいすう" />をえらぶ</h2>
     <p class="step-title">{step.title}</p>
     <ul class="picker">
       {#each COUNTS as c (c.label)}

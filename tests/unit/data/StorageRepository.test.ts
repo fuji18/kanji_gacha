@@ -104,6 +104,17 @@ describe('StorageRepository ベスト/デイリーベスト更新（F9）', () =
     expect(repo.loadState().timeAttackBest.elementary).toBe(120);
   });
 
+  it('saveSettings は設定を保存し、別インスタンスで保持される（T-031）', () => {
+    const storage = new MemoryStorage();
+    const repo = new StorageRepository(storage);
+    repo.saveSettings({ hintAlwaysOn: false, furigana: true });
+    expect(repo.loadState().settings.furigana).toBe(true);
+    // リロード相当
+    expect(new StorageRepository(storage).loadState().settings.furigana).toBe(
+      true
+    );
+  });
+
   it('saveDailyBest は日付ごとに最大値を保持', () => {
     const storage = new MemoryStorage();
     const repo = new StorageRepository(storage);
