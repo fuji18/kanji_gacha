@@ -22,6 +22,7 @@ describe('defaultState', () => {
       joyo: 0,
     });
     expect(s.dailyBest).toEqual({});
+    expect(s.weakKanji).toEqual({}); // T-035
     expect(s.settings).toEqual({
       hintAlwaysOn: false,
       furigana: false,
@@ -62,6 +63,16 @@ describe('migrate v0 → v1（altDiscovered 補完・新問題C）', () => {
     expect(m.settings.hintAlwaysOn).toBe(true);
     // T-027：timeAttackBest 無しの旧データは既定 {0,0,0} で補完される（後方互換）。
     expect(m.timeAttackBest).toEqual({ elementary: 0, juniorhigh: 0, joyo: 0 });
+    // T-035：weakKanji 無しの旧データは {} 補完される（後方互換）。
+    expect(m.weakKanji).toEqual({});
+  });
+
+  it('既存の weakKanji は保持し、数値以外のエントリは捨てる（T-035）', () => {
+    const m = migrate({
+      schemaVersion: 1,
+      weakKanji: { 林: 4, 好: 'x', 品: 2 },
+    });
+    expect(m.weakKanji).toEqual({ 林: 4, 品: 2 }); // 不正値（好）は除外
   });
 
   it('既存の timeAttackBest は保持し、型不整合フィールドは既定に置換する（T-027）', () => {

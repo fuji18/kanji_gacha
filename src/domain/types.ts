@@ -106,6 +106,9 @@ export interface GameSession {
   level: Level;
   mode: 'free' | 'daily';
   gameMode: GameMode; // 山札（達成型）/ タイムアタック
+  // 復習モード（達成型の一種・T-035）。にがて漢字を優先出題する deck セッションか。
+  // timeAttack では常に false。Result の「もう一回」で復習を再現するために保持する。
+  isReview: boolean;
   seed: number | null; // daily は dailySeed の整数値（機能設計4.6）。free は null
   // deck モード：残り山札（partId 配列・末尾から非復元で引く）。timeAttack では空。
   deck: string[];
@@ -135,6 +138,7 @@ export interface GameResult {
   level: Level;
   mode: 'free' | 'daily';
   gameMode: GameMode; // 山札（達成型）/ タイムアタック（再挑戦・ベスト表示用）
+  isReview: boolean; // 復習モード（達成型・T-035）。「もう一回」で復習を再現するため保持する。
   score: number; // 最終スコア
   rank: string; // 称号（resolveRank の結果）
   createdKanji: string[]; // 作成漢字一覧（重複可・シェアの代表選定にも使う）
@@ -174,6 +178,9 @@ export interface PersistedState {
   bestScores: Record<Level, number>; // レベル別ベスト（じっくりモード）
   timeAttackBest: Record<Level, number>; // レベル別ベスト（タイムアタック・別枠・T-027）
   dailyBest: Record<string /* YYYYMMDD */, number>;
+  // にがて漢字の簡易SRS重み（T-035）。char -> にがて度（>0=にがて・大きいほど復習で優先）。
+  // 達成型の終了時に増減し、復習モードがこの重みで出題対象を選ぶ。
+  weakKanji: Record<string, number>;
   settings: Settings;
   schemaVersion: number; // マイグレーション用（現行=1）
 }

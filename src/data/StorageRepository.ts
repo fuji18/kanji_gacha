@@ -110,6 +110,12 @@ export class StorageRepository {
     this.persist();
   }
 
+  /** にがて漢字の簡易SRS重みを保存する（T-035）。マップ全体を置き換える（更新は呼び出し側で算出済み）。 */
+  saveWeakKanji(weak: Record<string, number>): void {
+    this.state.weakKanji = { ...weak };
+    this.persist();
+  }
+
   /** ユーザー設定を保存する（T-031 ふりがな等）。 */
   saveSettings(settings: Settings): void {
     this.state.settings = { ...settings };

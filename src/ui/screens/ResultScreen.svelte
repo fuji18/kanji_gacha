@@ -33,6 +33,13 @@
 
   function retry(): void {
     if (!result) return;
+    // 復習モード（T-035）は学年に依存しないため review フラグで再現する。
+    // 復習は常に joyo/deck 固定（HomeScreen.startReview と同じ呼び出し）。
+    if (result.isReview) {
+      sessionManager.start('joyo', result.mode, 'deck', { review: true });
+      navigate('game');
+      return;
+    }
     // 同じモード・同じ対象学年・同じ出題数で再開する（T-027/T-029）。
     sessionManager.start(result.level, result.mode, result.gameMode, {
       grades: result.deckGrades,

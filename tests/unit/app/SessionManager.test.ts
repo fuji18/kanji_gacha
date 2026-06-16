@@ -148,6 +148,7 @@ function emptyState(): PersistedState {
     bestScores: { elementary: 0, juniorhigh: 0, joyo: 0 },
     timeAttackBest: { elementary: 0, juniorhigh: 0, joyo: 0 },
     dailyBest: {},
+    weakKanji: {},
     settings: {
       hintAlwaysOn: false,
       furigana: false,
@@ -472,6 +473,72 @@ describe('SessionManager end / 収集率・新記録（deck）', () => {
     t = 4_500;
     const r = sm.end(s, 'deck_empty');
     expect(r.durationMs).toBe(3_500);
+  });
+});
+
+describe('SessionManager にがて漢字・復習モード（T-035）', () => {
+  it('達成型終了：未完成の対象字を にがて 登録し、完成字は登録しない', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    const { sm } = makeSM(storage);
+    const s = sm.start('elementary', 'free'); // 対象 [林,好,品,杏]
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林 完成
+    sm.end(s, 'deck_empty');
+    const weak = storage.loadState().weakKanji;
+    expect('林' in weak).toBe(false); // 完成字は にがて にしない
+    // 残り（好/品/杏 のうち対象だが未完成）は にがて 登録される
+    expect(weak['好']).toBeGreaterThan(0);
+    expect(weak['品']).toBeGreaterThan(0);
+  });
+
+  it('完成した対象字は にがて の重みが下がる（定着・正解で出にくく）', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    storage.saveWeakKanji({ 林: 5, 好: 5, 品: 5, 杏: 5 });
+    const { sm } = makeSM(storage);
+    const s = sm.start('elementary', 'free');
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林 完成
+    sm.end(s, 'deck_empty');
+    const weak = storage.loadState().weakKanji;
+    expect(weak['林']).toBe(4); // 5 - successDelta(1)
+    expect(weak['好']).toBe(5); // 未完成（既に頭打ち）
+  });
+
+  it('isReview は通常 deck で false、review 指定で true（結果にも伝播）', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    storage.saveWeakKanji({ 林: 3 });
+    const { sm } = makeSM(storage);
+    const normal = sm.start('elementary', 'free');
+    expect(normal.isReview).toBe(false);
+    const review = sm.start('joyo', 'free', 'deck', { review: true });
+    expect(review.isReview).toBe(true);
+    const r = sm.end(review, 'deck_empty');
+    expect(r.isReview).toBe(true);
+  });
+
+  it('復習モードは にがて 字だけを出題対象にする（優先出題）', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    // 林(ki+ki) と 好(ko+onna) を にがて にする。両方 fixture で作れる字。
+    storage.saveWeakKanji({ 林: 4, 好: 2 });
+    const { sm } = makeSM(storage);
+    const s = sm.start('joyo', 'free', 'deck', { review: true });
+    expect(s.targetTotal).toBe(2); // にがて2字が対象
+    expect(s.deckGrades).toEqual([]); // 学年非依存
+    expect(s.deck.length).toBeGreaterThan(0); // 部品で山札構築
+  });
+
+  it('復習モードで完成すると にがて から外れ、リロード後も保持（永続化）', () => {
+    const mem = new MemoryStorage();
+    const storage = new StorageRepository(mem);
+    storage.saveWeakKanji({ 林: 1 }); // successDelta で 0 になり外れる
+    const { sm } = makeSM(storage);
+    const s = sm.start('joyo', 'free', 'deck', { review: true });
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林 完成 → クリア（targetTotal=1・自動 end）
+    // リロード相当（同じ Storage を別インスタンスで読み直す）。
+    expect('林' in new StorageRepository(mem).loadState().weakKanji).toBe(
+      false
+    );
   });
 });
 
