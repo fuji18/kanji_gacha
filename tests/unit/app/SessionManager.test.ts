@@ -705,6 +705,40 @@ describe('SessionManager 表示支援（T-017 / T-020）', () => {
     expect(sm.reachableTotal()).toBe(REACHABLE.reachableN.joyo);
   });
 
+  it('kanjiStudyView は 読み/意味/画数/学年/部品 を返し、未知は null（T-036）', () => {
+    const { sm } = makeSM();
+    // 林=ki+ki → 構成部品 char は重複排除して ['ki']。画数8・grade1（fixture）。
+    expect(sm.kanjiStudyView('林')).toEqual({
+      char: '林',
+      readings: [],
+      meanings: [],
+      strokes: 8,
+      grade: 1,
+      parts: ['ki'],
+    });
+    // 品=kuchi+kuchi+kuchi → 部品は ['kuchi']（重複排除）。画数9。
+    expect(sm.kanjiStudyView('品')).toEqual({
+      char: '品',
+      readings: [],
+      meanings: [],
+      strokes: 9,
+      grade: 1,
+      parts: ['kuchi'],
+    });
+    expect(sm.kanjiStudyView('存在しない')).toBeNull();
+  });
+
+  it('gradeTotals は 小1〜小6 の到達可能字数を返す（学年別の分母・T-036）', () => {
+    const { sm } = makeSM();
+    const totals = sm.gradeTotals();
+    expect(totals.map((g) => g.grade)).toEqual([1, 2, 3, 4, 5, 6]);
+    // fixture は全字 grade1 かつ作れる字（林/好/品/杏）→ 小1=4、他学年=0。
+    expect(totals.find((g) => g.grade === 1)?.total).toBe(4);
+    for (const grade of [2, 3, 4, 5, 6]) {
+      expect(totals.find((g) => g.grade === grade)?.total).toBe(0);
+    }
+  });
+
   it('canPullGacha は playing・手札未満・山札ありで true', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');

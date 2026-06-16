@@ -180,6 +180,55 @@ export class SessionManager {
   }
 
   /**
+   * 図鑑「学習帳」の表示情報（読み・意味・画数・学年・構成部品）を解決する（T-036）。
+   * `kanjiView` の拡張版：カードに画数・部首を出すための情報を1度に返す。UI が `data` に直接
+   * 触れずに学習情報を得る窓口。辞書に無い char は null（`kanjiView` と同じ契約）。
+   *
+   * `parts` は代表分解の構成部品 char（重複排除・出現順）。部首名の導出材料として UI が使う
+   * （厳密な辞書的部首ではなく分解部品からの近似・機能設計の元データに radical 番号が無いため）。
+   */
+  kanjiStudyView(char: string): {
+    char: string;
+    readings: string[];
+    meanings: string[];
+    strokes: number;
+    grade: number;
+    parts: string[];
+  } | null {
+    const entry = this.dict.kanjiEntries.get(char);
+    if (entry === undefined) return null;
+    // 構成部品 char を出現順で重複排除（林=木+木 → ['木']）。
+    const seen = new Set<string>();
+    const parts: string[] = [];
+    for (const p of this.dict.partsForKanji(char)) {
+      if (!seen.has(p.char)) {
+        seen.add(p.char);
+        parts.push(p.char);
+      }
+    }
+    return {
+      char: entry.char,
+      readings: entry.readings,
+      meanings: entry.meanings,
+      strokes: entry.strokes,
+      grade: entry.grade,
+      parts,
+    };
+  }
+
+  /**
+   * 学年別の収集率の分母（小1〜小6の到達可能字数・T-036）。各学年について
+   * 「その学年に属し、かつ部品から作れる（到達可能）字数」を返す（`deckTargetKanji` と同基準）。
+   * セッションに依存しない静的値。UI は1度だけ取得し、発見数（分子）は永続データから算出する。
+   */
+  gradeTotals(): { grade: number; total: number }[] {
+    return [1, 2, 3, 4, 5, 6].map((grade) => ({
+      grade,
+      total: this.dict.deckTargetKanji([grade]).length,
+    }));
+  }
+
+  /**
    * 選択部品が作る漢字の表示情報を**副作用なし**で先読みする（段階ヒント・T-033）。
    * スコア・KPI・手札を変更しない。成立しない選択は null。現在のセッションレベルで判定する。
    */
