@@ -1,0 +1,30 @@
+# Cloudflare Pages 配信ヘッダ（fujioha_platform スポーク・T-049）。
+# セキュリティヘッダの「単一の正」。index.html へ meta CSP は注入しない（重複・ドリフト防止／
+# meta では frame-ancestors を表現できないため）。
+#
+# CSP 方針（Phase1・最厳格）：
+#  - default-src 'self'：同一オリジン以外を既定で遮断。外部API/CDN/フォントに依存しない。
+#  - style-src に 'unsafe-inline' を許容：Svelte の動的 inline style 属性（例: 進捗バー width）を
+#    使うため必須。これを外すと本番でスタイルが壊れる（T-026 の bare default-src の落とし穴）。
+#  - script-src 'self'：本番ビルドはインラインJSを含まない（エントリJS・registerSW.js は外部src）。
+#  - frame-ancestors 'none'：iframe 埋め込み禁止（スポークは外部リンク target=_blank で開く）。
+#  - Phase2 でランキング等のBEを足す場合は connect-src を段階的に開放する。
+
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; form-action 'self'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# content-hash 付きアセットは不変。長期キャッシュで再取得を抑止する。
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Service Worker は常に最新を取得させる（辞書/アプリ更新の確実な反映）。
+/sw.js
+  Cache-Control: no-cache
+
+/registerSW.js
+  Cache-Control: no-cache

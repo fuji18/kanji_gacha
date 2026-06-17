@@ -1,0 +1,6 @@
+# Cloudflare Pages プロジェクト設定（fujioha_platform スポーク・T-049）。
+# Root directory はリポジトリルート `/`、ビルド出力は `dist/`。
+# Cloudflare Pages はビルド後にこのファイルを読み pages_build_output_dir を解決する。
+name = "kanji-gattai"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-06-17"
