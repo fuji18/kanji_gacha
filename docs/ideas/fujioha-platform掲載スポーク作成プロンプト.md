@@ -114,9 +114,11 @@
 
 ## 3. 当ゲーム（漢字合体ガチャ）固有のメモ
 
-- レジストリ枠は既に存在: `apps/game/src/content/games/kanji-drop.json`
-  （`id:"kanji-drop"`, `jp:"ガチャ漢字"`, `url:null`, `status:"draft"`, `tag:"wip"`）。
-  → **id/サブドメインは `kanji-drop` に統一**するのが既存レジストリと整合的。
+- **id/サブドメインは `kanji-gattai`（漢字合体）に統一**する方針。
+  サブドメインは `kanji-gattai.fujioha.com`、サムネは `/games/kanji-gattai.png`。
+- レジストリ枠は既に `apps/game/src/content/games/kanji-drop.json`
+  （`id:"kanji-drop"`, `jp:"ガチャ漢字"`, `url:null`, `status:"draft"`, `tag:"wip"`）として存在するため、
+  公開時に **`kanji-gattai.json` へリネーム**し id を `"kanji-gattai"` に変更する（詳細は T-051）。
 - 現状の T-026（PR #57）は **GitHub Pages・サブパス `/kanji_gacha/`** 前提で作られており、
   Cloudflare Pages・ルート配信とは不適合。かつ後続実装(T-027〜T-037)より前から分岐しており
   退行を含むため、**現 develop 上で Cloudflare 用に作り直す**こと。
