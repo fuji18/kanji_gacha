@@ -5,6 +5,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 // 静的Webアプリ（SSR無し）。vite-plugin-pwa で最小SWを有効化し、初回ロード後の完全オフライン動作を
 // 保証する（architecture 1.3/9.1・PRD非機能・T-024）。ホーム追加/インストール等の体験強化は後続フェーズ。
 export default defineConfig({
+  // fujioha_platform のスポーク（kanji-gattai.fujioha.com）として Cloudflare Pages の
+  // ルート `/` に配信する（T-049）。サブパス前提を成果物に埋め込まないため base は常に '/' 固定。
+  base: '/',
   plugins: [
     svelte(),
     VitePWA({
