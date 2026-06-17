@@ -24,16 +24,26 @@ export default defineConfig({
         // SPA：未キャッシュのナビゲーションは index.html にフォールバック（オフラインでもルート表示）。
         navigateFallback: 'index.html',
       },
-      // 最小の Web App Manifest（オフライン保証が主目的）。アイコン/スプラッシュ等は後続フェーズ（F18）。
+      // Web App Manifest。色は和風ブランド（朱/和紙）に合わせる（T-050）。アイコンは og 生成と
+      // 共通の 512px PNG を流用（apple-touch-icon.png）。maskable 専用アイコンは後続フェーズ。
       manifest: {
         name: '漢字合体ガチャ',
         short_name: '漢字ガチャ',
-        description: '漢字のパーツを集めて合体させるガチャゲーム',
+        description:
+          '漢字のパーツを集めて合体させ、新しい漢字を作る学習ガチャ。小学生の学年別から大人の常用漢字まで。',
         lang: 'ja',
         start_url: '.',
         display: 'standalone',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#c0392b',
+        background_color: '#f5f1e6',
+        icons: [
+          {
+            src: 'apple-touch-icon.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+        ],
       },
     }),
   ],

@@ -1,0 +1,5 @@
+# 漢字合体ガチャ（fujioha_platform スポーク）。全クローラに公開する。
+User-agent: *
+Allow: /
+
+Sitemap: https://kanji-gattai.fujioha.com/sitemap.xml
