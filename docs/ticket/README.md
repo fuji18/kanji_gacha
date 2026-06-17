@@ -76,7 +76,7 @@
 | [T-048](./T-048-reading-quiz.md) | 読みクイズ／意味当て | 7 | P2 | T-030 | — | 🔲 |
 | [T-049](./T-049-cloudflare-spoke-deploy.md) | Cloudflare Pages スポーク配信への再構築 | 8 | P0 | T-024 | — | 🔲 |
 | [T-050](./T-050-listing-seo-meta.md) | 掲載向け SEO/OGP/メタ整備 | 8 | P1 | T-049 | — | 🔲 |
-| [T-051](./T-051-platform-registry.md) | プラットフォームレジストリ登録（kanji-drop） | 8 | P0 | T-049,T-050 | — | 🔲 |
+| [T-051](./T-051-platform-registry.md) | プラットフォームレジストリ登録（kanji-gattai） | 8 | P0 | T-049,T-050 | — | 🔲 |
 | [T-052](./T-052-brand-consistency.md) | ブランド一貫性（@fujioha/ui 取り込み） | 8 | P2 | T-049 | — | 🔲 |
 
 ## 依存グラフ（概略）

@@ -14,7 +14,7 @@ fujioha_platform の掲載契約（**Cloudflare Pages・サブドメインのル
 本チケットで **現 develop 上に Cloudflare 用デプロイ設定を作り直す**。PR #57 はクローズする。
 
 ## 目的
-当ゲームを `kanji-drop.fujioha.com`（独立 Cloudflare Pages プロジェクト・ルート配信）として
+当ゲームを `kanji-gattai.fujioha.com`（独立 Cloudflare Pages プロジェクト・ルート配信）として
 公開できる状態にする。
 
 ## スコープ（実装する）
