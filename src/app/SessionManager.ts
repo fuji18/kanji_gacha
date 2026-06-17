@@ -180,6 +180,41 @@ export class SessionManager {
   }
 
   /**
+   * 図鑑の学習帳表示用の詳細ビュー（T-036）。読み・意味に加えて画数・学年・構成部品（部品文字）を返す。
+   * 部品は分解辞書（`partsForKanji`）から導出する。辞書に無い char は null。
+   */
+  kanjiStudyView(char: string): {
+    char: string;
+    readings: string[];
+    meanings: string[];
+    strokes: number;
+    grade: number;
+    parts: string[];
+  } | null {
+    const entry = this.dict.kanjiEntries.get(char);
+    if (entry === undefined) return null;
+    return {
+      char: entry.char,
+      readings: entry.readings,
+      meanings: entry.meanings,
+      strokes: entry.strokes,
+      grade: entry.grade,
+      parts: this.dict.partsForKanji(char).map((p) => p.char),
+    };
+  }
+
+  /**
+   * 小学校の学年別（小1〜小6）の対象漢字数（makeable）を返す（T-036 学年別収集率の分母）。
+   * 図鑑が「収集済み / 総数」を学年バーで表示するために使う。
+   */
+  gradeTotals(): { grade: number; total: number }[] {
+    return [1, 2, 3, 4, 5, 6].map((grade) => ({
+      grade,
+      total: this.dict.deckTargetKanji([grade]).length,
+    }));
+  }
+
+  /**
    * 選択部品が作る漢字の表示情報を**副作用なし**で先読みする（段階ヒント・T-033）。
    * スコア・KPI・手札を変更しない。成立しない選択は null。現在のセッションレベルで判定する。
    */

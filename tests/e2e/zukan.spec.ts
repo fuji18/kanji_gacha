@@ -36,4 +36,16 @@ test('合体で新規発見すると図鑑の収集数が増える（F7）', asy
   await expect(
     page.getByRole('button', { name: /読み上げ/ }).first()
   ).toBeVisible();
+
+  // 学習帳化（T-036）：学年別収集率が表示される
+  await expect(page.getByTestId('grade-collection')).toBeVisible();
+
+  // カードをタップすると筆順オーバーレイが開く
+  await page
+    .getByRole('button', { name: /の筆順を見る/ })
+    .first()
+    .click();
+  await expect(page.getByRole('dialog', { name: /の筆順/ })).toBeVisible();
+  await page.getByRole('button', { name: '閉じる' }).click();
+  await expect(page.getByRole('dialog', { name: /の筆順/ })).toHaveCount(0);
 });

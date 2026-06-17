@@ -692,6 +692,25 @@ describe('SessionManager ふりがな設定（T-031）', () => {
   });
 });
 
+describe('SessionManager 図鑑学習帳ビュー（T-036）', () => {
+  it('kanjiStudyView は画数・学年・部品を含む詳細を返す', () => {
+    const { sm } = makeSM();
+    const v = sm.kanjiStudyView('林');
+    expect(v?.strokes).toBe(8);
+    expect(v?.grade).toBe(1);
+    expect(v?.parts).toEqual(['ki', 'ki']); // 林=ki+ki（fixture は char=id）
+    expect(sm.kanjiStudyView('存在しない')).toBeNull();
+  });
+
+  it('gradeTotals は小1〜小6の対象漢字数を返す', () => {
+    const { sm } = makeSM();
+    const gt = sm.gradeTotals();
+    expect(gt.map((g) => g.grade)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(gt[0].total).toBe(4); // fixture は全字 grade1・makeable 4字
+    expect(gt[1].total).toBe(0);
+  });
+});
+
 describe('SessionManager 表示支援（T-017 / T-020）', () => {
   it('partView は既知 partId の文字とレアリティを返し、未知は null', () => {
     const { sm } = makeSM();
