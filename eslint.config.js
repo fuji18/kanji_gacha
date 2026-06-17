@@ -109,6 +109,12 @@ export default tseslint.config(
     },
   },
   {
+    // Node 実行のビルド補助スクリプト（.mjs）。console/process 等の Node globals に加え、
+    // Playwright の page.evaluate コールバック内で参照する document 等の browser globals も解決する。
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     ignores: [
       'node_modules/**',
       'dist/**',
