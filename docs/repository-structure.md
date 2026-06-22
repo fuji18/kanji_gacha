@@ -54,11 +54,11 @@ kanji_gacha/
 │   │   │   ├── ZukanScreen.svelte
 │   │   │   └── AboutScreen.svelte
 │   │   ├── components/
-│   │   │   ├── HandView.svelte     # 手札表示・部品選択
-│   │   │   ├── PartChip.svelte     # 部品1枚（レアリティ色）
-│   │   │   ├── GachaButton.svelte
-│   │   │   ├── ScoreBar.svelte     # スコア・コンボ・ガチャ残
-│   │   │   └── HintButton.svelte
+│   │   │   ├── HandView.svelte     # 手札表示・部品選択（選択順バッジ）
+│   │   │   ├── PartChip.svelte     # 部品1枚（レアリティ色・選択順）
+│   │   │   ├── GachaButton.svelte  # 巻物スタイルのガチャボタン
+│   │   │   └── TimeBar.svelte      # タイムアタック残時間ゲージ
+│   │   │   # スコア/コンボ/山札・ヒントは GameScreen の HUD/アクションへインライン化（和風刷新）
 │   │   └── effects/
 │   │       ├── particleField.ts    # Canvas 2D パーティクル（プール管理）
 │   │       └── effects.css         # フラッシュ/シェイク/グロウ

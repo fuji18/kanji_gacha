@@ -89,11 +89,115 @@
     0 0 4px var(--rarity-color);
 }
 
+/* ===== handoff design 由来の演出（和風モダン） ===== */
+
+/* 合体プロンプト「合」の上下脈動（2枚選択＝合体可能で点滅）。 */
+@keyframes kg-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* 学習カードの浮き上がり出現。 */
+@keyframes kg-float {
+  0% {
+    transform: translateY(16px) scale(0.92);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-3px) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 合体成功時の金の閃光（拡がって消える）。 */
+@keyframes kg-splash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  30% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.7);
+  }
+}
+
+/* 完成漢字の出現（下からせり上がる）。 */
+@keyframes kg-reveal {
+  0% {
+    opacity: 0.5;
+    transform: translateY(6px) scale(0.88);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 主要アクション（合体！）が押せる状態の金リング点滅。 */
+@keyframes kg-ready {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+  }
+  50% {
+    box-shadow: 0 0 17px 3px rgba(212, 175, 55, 0.65);
+  }
+}
+
+/* ガチャ巻物の常時グロウ。 */
+@keyframes kg-scroll-glow {
+  0%,
+  100% {
+    box-shadow: var(--md-sys-elevation-1);
+  }
+  50% {
+    box-shadow:
+      var(--md-sys-elevation-1),
+      0 0 22px rgba(212, 175, 55, 0.5);
+  }
+}
+
+.kg-pulse {
+  animation: kg-pulse 1.1s ease-in-out infinite;
+}
+.kg-float {
+  animation: kg-float 0.5s ease both;
+}
+.kg-splash {
+  animation: kg-splash 0.6s ease forwards;
+}
+.kg-reveal {
+  animation: kg-reveal 0.5s ease both;
+}
+.kg-ready {
+  animation: kg-ready 1.2s ease-in-out infinite;
+}
+.kg-scroll-glow {
+  animation: kg-scroll-glow 1.8s ease-in-out infinite;
+}
+
 /* モーション軽減：派手なアニメーションは無効化（瞬時表示にする）。 */
 @media (prefers-reduced-motion: reduce) {
   .kg-capsule-pop,
   .kg-shake,
-  .kg-score-float {
+  .kg-score-float,
+  .kg-pulse,
+  .kg-float,
+  .kg-splash,
+  .kg-reveal,
+  .kg-ready,
+  .kg-scroll-glow {
     animation: none;
   }
   /* 光感度配慮：グロウも抑制する。 */

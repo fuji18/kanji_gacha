@@ -43,6 +43,19 @@
   --md-sys-color-outline-variant: #d6cdb4;
   --md-sys-color-error: #b3261e;
 
+  /* ===== 和風装飾（handoff design 由来。CDN不使用・自前トークン化） ===== */
+  --kg-color-gold-deep: #b8860b; /* 金（濃・テキスト可読） */
+  --kg-color-gold-bright: #d4af37; /* 金（装飾・グロウ） */
+  --kg-color-vermilion-deep: #a72d1f; /* 朱（巻物の濃部） */
+  --kg-color-vermilion-bright: #d24532; /* 朱（巻物の明部） */
+  --kg-color-indigo-night-1: #34467a; /* 藍夜（上） */
+  --kg-color-indigo-night-2: #1c2848; /* 藍夜（中） */
+  --kg-color-indigo-night-3: #141d36; /* 藍夜（下） */
+  --kg-color-ink-bg: #211d17; /* 墨地（ページ余白の最暗部） */
+  /* 学習カード・巻物など浮遊要素の強い影。 */
+  --kg-elevation-float:
+    0 16px 34px rgba(90, 60, 20, 0.22), 0 2px 8px rgba(43, 43, 43, 0.12);
+
   /* ===== 形状（角丸） ===== */
   --md-sys-shape-corner-small: 8px;
   --md-sys-shape-corner-medium: 12px;
