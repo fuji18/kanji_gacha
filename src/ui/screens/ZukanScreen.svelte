@@ -219,7 +219,7 @@
     color: var(--md-sys-color-on-surface);
   }
   .rate {
-    margin: 0.5rem 0 1.25rem;
+    margin: 0.4rem 0 0.9rem;
   }
   .rate-num {
     font-size: var(--md-sys-typescale-title-size);
@@ -330,7 +330,7 @@
   }
   /* 学年別収集率（T-036） */
   .grades {
-    margin: 0 0 1.25rem;
+    margin: 0 0 0.9rem;
   }
   .grades-title {
     font-family: var(--md-ref-typeface-brand);

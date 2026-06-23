@@ -538,7 +538,7 @@
           <div class="learning-card kg-float" data-testid="score-float">
             <span class="lc-splash kg-splash" aria-hidden="true"></span>
             <span class="lc-char kg-reveal">
-              <StrokeKanji char={floatInfo.char} size={72} {reducedMotion} />
+              <StrokeKanji char={floatInfo.char} size={96} {reducedMotion} />
             </span>
             {#if floatInfo.reading}
               <span class="lc-yomi"
@@ -934,8 +934,8 @@
     /* 余剰高を吸う可変領域。縦長では伸びて中央に収まり、手札増減ぶんはここが伸縮して
        下のアクション行を動かさない。短い画面では min-height まで縮む。 */
     flex: 1 1 0;
-    min-height: 9rem;
-    margin: 0.2rem 0 0.5rem;
+    min-height: 7rem;
+    margin: 0.1rem 0 0.4rem;
     border-radius: var(--md-sys-shape-corner-large);
     background: color-mix(
       in srgb,
@@ -986,8 +986,8 @@
     pointer-events: none;
   }
   .prompt-circle {
-    width: 3.6rem;
-    height: 3.6rem;
+    width: 4.4rem;
+    height: 4.4rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -995,7 +995,7 @@
       color-mix(in srgb, var(--kg-color-gold-deep) 50%, transparent);
     border-radius: var(--md-sys-shape-corner-full);
     font-family: var(--md-ref-typeface-brand);
-    font-size: 1.8rem;
+    font-size: 2.2rem;
     font-weight: 800;
     color: var(--kg-color-gold-deep);
   }
@@ -1013,7 +1013,7 @@
   }
   .prompt-text {
     font-family: var(--md-ref-typeface-brand);
-    font-size: 0.9rem;
+    font-size: 1rem;
   }
   .prompt.ready .prompt-text {
     font-weight: 700;
@@ -1030,8 +1030,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.2rem;
-    padding: 0.9rem 1.4rem;
+    gap: 0.3rem;
+    padding: 1rem 1.8rem;
     border-radius: var(--md-sys-shape-corner-large);
     background: linear-gradient(
       160deg,
@@ -1066,19 +1066,19 @@
     align-items: center;
     gap: 0.15rem;
     font-family: var(--md-ref-typeface-brand);
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     color: var(--md-sys-color-on-surface-variant);
   }
   .lc-mean {
-    font-size: 0.78rem;
+    font-size: 0.85rem;
     color: var(--md-sys-color-on-surface-variant);
   }
   .lc-meta {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.6rem;
     align-items: center;
-    margin-top: 0.1rem;
-    font-size: 0.78rem;
+    margin-top: 0.15rem;
+    font-size: 0.9rem;
   }
   .lc-strokes {
     color: var(--md-sys-color-secondary);
@@ -1111,8 +1111,8 @@
   /* 手札域は最初から2行ぶんを確保（高さ固定）。札が増えたら内部スクロールし、
      アクション行の高さは動かさない（HandView の .hand を上書き）。 */
   .tray :global(.hand) {
-    height: 9.6rem;
-    min-height: 9.6rem;
+    height: 11rem;
+    min-height: 11rem;
     overflow-y: auto;
     align-content: flex-start;
     padding: 0.2rem 0;

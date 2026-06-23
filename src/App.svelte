@@ -112,7 +112,7 @@
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--md-sys-shape-corner-large);
     box-shadow: var(--md-sys-elevation-2);
-    padding: 1.1rem 1.1rem 1.3rem;
+    padding: 0.9rem 1rem 1rem;
   }
   /* 画面見出しは金の圏点（上罫）で和の格を添える。 */
   :global(.screen > h2) {

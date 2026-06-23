@@ -216,7 +216,7 @@
     color: var(--md-sys-color-tertiary);
   }
   .block {
-    margin: 1rem 0;
+    margin: 0.7rem 0;
   }
   .block h3 {
     font-family: var(--md-ref-typeface-brand);

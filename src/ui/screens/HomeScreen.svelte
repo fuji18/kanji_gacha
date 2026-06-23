@@ -329,7 +329,7 @@
   .levels {
     list-style: none;
     padding: 0;
-    margin: 0 0 1.25rem;
+    margin: 0 0 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -395,7 +395,7 @@
     color: var(--md-sys-color-on-surface-variant);
   }
   .ta-section {
-    margin: 1.5rem 0 0;
+    margin: 1.1rem 0 0;
   }
   .ta-title {
     font-family: var(--md-ref-typeface-brand);
@@ -427,7 +427,7 @@
     color: var(--md-sys-color-on-surface-variant);
   }
   .review-section {
-    margin: 1.5rem 0 0;
+    margin: 1.1rem 0 0;
   }
   .review-title {
     font-family: var(--md-ref-typeface-brand);
