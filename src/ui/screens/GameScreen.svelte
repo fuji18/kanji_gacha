@@ -544,7 +544,7 @@
         disabled={!canDiscard}
         onclick={doDiscard}>捨てて引き直す</MaterialButton
       >
-      <MaterialButton variant="outlined" color="secondary" onclick={quit}
+      <MaterialButton variant="text" color="secondary" onclick={quit}
         >やめる</MaterialButton
       >
     </nav>
@@ -993,6 +993,12 @@
     background: var(--md-sys-color-surface-container-low);
     color: var(--md-sys-color-on-surface-variant);
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .hint-btn:focus-visible,
+  .combine-btn:focus-visible {
+    outline: 3px solid var(--kg-color-gold-bright);
+    outline-offset: 2px;
   }
   .hint-tag {
     width: 1.1rem;

@@ -56,6 +56,13 @@
   --kg-elevation-float:
     0 16px 34px rgba(90, 60, 20, 0.22), 0 2px 8px rgba(43, 43, 43, 0.12);
 
+  /* 下部アクションバーの半透明和紙地（本文の上に固定して親指リーチを良くする）。 */
+  --kg-surface-bar: rgba(245, 241, 230, 0.92);
+  /* 和風3Dボタンの沈み込み量（filled raised の box-shadow 基準）。 */
+  --kg-btn-raise: 4px;
+  /* キーボード/タッチ操作のフォーカスリング（金）。 */
+  --kg-focus-ring: 0 0 0 3px rgba(212, 175, 55, 0.6);
+
   /* ===== 形状（角丸） ===== */
   --md-sys-shape-corner-small: 8px;
   --md-sys-shape-corner-medium: 12px;

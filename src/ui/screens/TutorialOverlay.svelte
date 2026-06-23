@@ -296,6 +296,12 @@
     transform: translateY(2px);
     box-shadow: 0 2px 0 #7d2c1c;
   }
+  .primary:focus-visible,
+  .tile:focus-visible,
+  .skip:focus-visible {
+    outline: 3px solid var(--kg-color-gold-bright);
+    outline-offset: 2px;
+  }
   .skip {
     position: absolute;
     top: 0.5rem;

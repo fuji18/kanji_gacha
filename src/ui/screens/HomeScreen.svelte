@@ -3,6 +3,7 @@
   import { navigate } from '../../app/stores/routeStore';
   import { persistedStore } from '../../app/stores/persistedStore';
   import Furigana from '../components/Furigana.svelte';
+  import MaterialButton from '../components/MaterialButton.svelte';
 
   // Home 画面（T-016 / PRD F3・F9）。レベル選択とエントリ導線を提供する。
   // SessionManager は App から prop で受け取る（ui→app の依存のみ。domain/data は型も含め直接 import しない）。
@@ -216,26 +217,36 @@
       </section>
     {/if}
 
-    <nav class="actions">
-      <button type="button" onclick={() => navigate('zukan')}
-        ><Furigana text="図鑑" reading="ずかん" /></button
+    <nav class="actions home-actions">
+      <MaterialButton
+        variant="text"
+        color="secondary"
+        onclick={() => navigate('zukan')}
+        ><Furigana text="図鑑" reading="ずかん" /></MaterialButton
       >
-      <button type="button" onclick={() => navigate('about')}>About</button>
+      <MaterialButton
+        variant="text"
+        color="secondary"
+        onclick={() => navigate('about')}>About</MaterialButton
+      >
       <button
         type="button"
-        class="furigana-toggle"
+        class="toggle-chip"
+        class:on={furiganaOn}
         aria-pressed={furiganaOn}
         onclick={toggleFurigana}>ふりがな {furiganaOn ? 'ON' : 'OFF'}</button
       >
       <button
         type="button"
-        class="furigana-toggle"
+        class="toggle-chip"
+        class:on={largeTextOn}
         aria-pressed={largeTextOn}
         onclick={toggleLargeText}>文字大 {largeTextOn ? 'ON' : 'OFF'}</button
       >
       <button
         type="button"
-        class="furigana-toggle"
+        class="toggle-chip"
+        class:on={ttsOn}
         aria-pressed={ttsOn}
         onclick={toggleTts}>音声 {ttsOn ? 'ON' : 'OFF'}</button
       >
@@ -255,7 +266,9 @@
       {/each}
     </ul>
     <nav class="actions">
-      <button type="button" onclick={back}>もどる</button>
+      <MaterialButton variant="text" color="secondary" onclick={back}
+        >もどる</MaterialButton
+      >
     </nav>
   {:else}
     <h2><Furigana text="出題数" reading="しゅつだいすう" />をえらぶ</h2>
@@ -273,7 +286,9 @@
       {/each}
     </ul>
     <nav class="actions">
-      <button type="button" onclick={back}>もどる</button>
+      <MaterialButton variant="text" color="secondary" onclick={back}
+        >もどる</MaterialButton
+      >
     </nav>
   {/if}
 </section>
@@ -481,6 +496,42 @@
   .pick:hover {
     transform: translateY(-1px);
     box-shadow: var(--md-sys-elevation-2);
+  }
+  .home-actions {
+    gap: 0.5rem;
+  }
+  /* 設定トグル（ふりがな/文字大/音声）。ネイティブ button のまま（aria-pressed 契約）だが、
+     ON/OFF を色で明示してボタン体系のトーンに合わせる。 */
+  .toggle-chip {
+    min-height: 2.5rem;
+    padding: 0 0.9rem;
+    font-family: var(--md-ref-typeface-plain);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--md-sys-color-on-surface-variant);
+    background: var(--md-sys-color-surface-container);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-full);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .toggle-chip.on {
+    color: var(--md-sys-color-on-primary);
+    background: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-primary);
+  }
+  .toggle-chip:focus-visible {
+    outline: 3px solid var(--kg-color-gold-bright);
+    outline-offset: 2px;
+  }
+  /* モード札のフォーカス可視化（タップ/キーボード）。 */
+  .level:focus-visible,
+  .daily:focus-visible,
+  .ta:focus-visible,
+  .review:focus-visible,
+  .pick:focus-visible {
+    outline: 3px solid var(--kg-color-gold-bright);
+    outline-offset: 2px;
   }
   @media (prefers-reduced-motion: reduce) {
     .level,

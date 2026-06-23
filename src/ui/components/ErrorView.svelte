@@ -110,6 +110,10 @@
     transform: translateY(2px);
     box-shadow: 0 2px 0 #7d2c1c;
   }
+  .retry:focus-visible {
+    outline: 3px solid var(--kg-color-gold-bright);
+    outline-offset: 2px;
+  }
   .code {
     font-family: monospace;
     font-size: 0.62rem;

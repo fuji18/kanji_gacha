@@ -3,6 +3,7 @@
   import { navigate } from '../../app/stores/routeStore';
   import { buildShareText } from '../share/shareText';
   import { shareOrCopy } from '../share/share';
+  import MaterialButton from '../components/MaterialButton.svelte';
 
   // Result 画面（T-019 / PRD F6・F9）。プレイ結果の表示とリトライ・共有・ホーム導線。
   // 結果は SessionManager.getResult() から取得（型推論で domain/data を直接 import しない）。
@@ -77,7 +78,9 @@
   {#if result === null}
     <p>結果がありません。</p>
     <nav class="actions">
-      <button type="button" onclick={home}>ホーム</button>
+      <MaterialButton variant="filled" color="primary" onclick={home}
+        >ホーム</MaterialButton
+      >
     </nav>
   {:else}
     {#if result.isNewBest}
@@ -133,12 +136,18 @@
     {/if}
 
     <nav class="actions result-actions">
-      <button type="button" class="act-primary" onclick={retry}>もう一回</button
+      <MaterialButton variant="filled" color="primary" onclick={retry}
+        >もう一回</MaterialButton
       >
-      <button type="button" class="act-gold" onclick={share} disabled={sharing}
-        >シェア</button
+      <MaterialButton
+        variant="tonal"
+        color="tertiary"
+        disabled={sharing}
+        onclick={share}>シェア</MaterialButton
       >
-      <button type="button" class="act-plain" onclick={home}>ホーム</button>
+      <MaterialButton variant="text" color="secondary" onclick={home}
+        >ホーム</MaterialButton
+      >
     </nav>
   {/if}
 </section>
@@ -249,53 +258,14 @@
     font-size: var(--md-sys-typescale-body-size);
   }
 
-  /* アクション行（design: 朱3D もう一回 / 金枠 シェア / 白枠 ホーム）。 */
+  /* アクション行：もう一回（主CTA）とシェアを伸ばし、ホーム（離脱）は最小幅に。 */
   .result-actions {
     align-items: stretch;
   }
-  .result-actions button {
-    min-height: 2.9rem;
-    font-family: var(--md-ref-typeface-brand);
-    font-weight: 700;
-    font-size: 1rem;
-    border-radius: var(--md-sys-shape-corner-medium);
-    cursor: pointer;
-  }
-  .act-primary {
+  .result-actions :global(.md-btn) {
     flex: 1;
-    color: #fff3e4;
-    background: linear-gradient(
-      180deg,
-      var(--kg-color-vermilion-bright),
-      var(--kg-color-vermilion-deep)
-    );
-    border: none;
-    box-shadow: 0 4px 0 #7d2c1c;
   }
-  .act-primary:active {
-    transform: translateY(2px);
-    box-shadow: 0 2px 0 #7d2c1c;
-  }
-  .act-gold {
-    flex: 1;
-    color: #7a5713;
-    background: linear-gradient(160deg, #fffaf0, #f6edd6);
-    border: 1px solid var(--kg-color-gold-deep);
-  }
-  .act-gold:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-  }
-  .act-plain {
-    flex: none;
-    padding: 0 1rem;
-    color: var(--md-sys-color-on-surface);
-    background: var(--md-sys-color-surface);
-    border: 1px solid var(--md-sys-color-outline-variant);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .act-primary {
-      transition: none;
-    }
+  .result-actions :global(.md-btn.text) {
+    flex: 0 0 auto;
   }
 </style>

@@ -135,16 +135,31 @@
       var(--kg-color-gold-bright)
     );
   }
+  /* アクション行：本文との区切り罫を入れて視覚的に分離する。 */
   :global(.screen .actions) {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.6rem;
     justify-content: center;
     margin-top: 1.25rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
   }
-  :global(.screen .actions button) {
-    padding: 0.6rem 1.4rem;
-    font-size: 1rem;
-    cursor: pointer;
+  /* スマホ：主要アクションを画面下に固定（親指リーチ）。半透明和紙＋セーフエリア対応。
+     Game 画面は独自レイアウトのため対象外（:not(.game)）。 */
+  @media (max-width: 640px) {
+    :global(.screen:not(.game)) {
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100dvh - 4.5rem);
+    }
+    :global(.screen:not(.game) .actions) {
+      position: sticky;
+      bottom: 0;
+      margin-top: auto;
+      padding: 0.8rem 0.2rem;
+      padding-bottom: max(0.8rem, env(safe-area-inset-bottom));
+      background: var(--kg-surface-bar);
+    }
   }
 </style>
