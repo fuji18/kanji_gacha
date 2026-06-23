@@ -58,8 +58,8 @@
 <style>
   .chip {
     position: relative;
-    width: 4.2rem;
-    height: 5.4rem;
+    width: 3.4rem;
+    height: 4.4rem;
     padding: 0;
     border: 2px solid var(--rarity-color);
     border-radius: var(--md-sys-shape-corner-medium);
@@ -80,7 +80,7 @@
   }
   .kanji {
     font-family: var(--md-ref-typeface-kanji);
-    font-size: 2.4rem;
+    font-size: 1.95rem;
     line-height: 1;
     color: var(--md-sys-color-on-surface);
   }

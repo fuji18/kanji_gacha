@@ -75,6 +75,31 @@
   const reducedMotion =
     typeof matchMedia !== 'undefined' &&
     matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- 舞い散る装飾（CSS パーティクル。桜びら＋金の粒。reduced-motion では出さない・handoff design）----
+  const ambient: string[] = (() => {
+    if (reducedMotion) return [];
+    const out: string[] = [];
+    for (let i = 0; i < 12; i++) {
+      const gold = i % 3 === 0;
+      const left = (i * 8.3 + ((i * i * 11) % 11)) % 100;
+      const dur = 9 + (i % 6) * 2;
+      const delay = -((i * 2.1) % dur);
+      if (gold) {
+        const sz = 4 + (i % 3) * 2;
+        out.push(
+          `top:${(i * 7) % 70}%;left:${left}%;width:${sz}px;height:${sz}px;border-radius:50%;background:radial-gradient(circle,#ffe9a8,#d4af37);box-shadow:0 0 7px rgba(212,175,55,.85);animation:kg-twinkle ${1.8 + (i % 4) * 0.6}s ease-in-out ${delay}s infinite`
+        );
+      } else {
+        const sz = 7 + (i % 4) * 3;
+        out.push(
+          `top:0;left:${left}%;width:${sz}px;height:${sz}px;background:rgba(244,176,198,.5);border-radius:100% 0 100% 0;animation:kg-fall-${i % 2 ? 'a' : 'b'} ${dur}s linear ${delay}s infinite`
+        );
+      }
+    }
+    return out;
+  })();
+
   let canvasEl = $state<HTMLCanvasElement | null>(null);
   let fxWidth = $state(0);
   let fxHeight = $state(0);
@@ -331,6 +356,57 @@
     <p>ゲームが開始されていません。</p>
     <button type="button" onclick={quit}>ホームへ</button>
   {:else}
+    <!-- 地紋（麻の葉＝学習 / 青海波＝タイムアタック） -->
+    {#if isTimeAttack}
+      <svg class="jimon" aria-hidden="true">
+        <defs
+          ><pattern
+            id="seigG"
+            x="0"
+            y="0"
+            width="46"
+            height="23"
+            patternUnits="userSpaceOnUse"
+            ><g fill="none" stroke="#d4af37" stroke-width="1" opacity="0.1"
+              ><path d="M0 23 a23 23 0 0 1 46 0" /><path
+                d="M7.6 23 a15.3 15.3 0 0 1 30.6 0"
+              /><path d="M15.3 23 a7.6 7.6 0 0 1 15.3 0" /><path
+                d="M23 23 a23 23 0 0 1 46 0"
+              /><path d="M-23 23 a23 23 0 0 1 46 0" /></g
+            ></pattern
+          ></defs
+        >
+        <rect width="100%" height="100%" fill="url(#seigG)" />
+      </svg>
+    {:else}
+      <svg class="jimon" aria-hidden="true">
+        <defs
+          ><pattern
+            id="asaG"
+            x="0"
+            y="0"
+            width="46"
+            height="27"
+            patternUnits="userSpaceOnUse"
+            ><g fill="none" stroke="#2c3e6b" stroke-width="0.7" opacity="0.07"
+              ><path
+                d="M23 0 L23 27 M0 13.5 L46 13.5 M0 0 L46 27 M46 0 L0 27 M23 0 L0 13.5 L23 27 L46 13.5 Z"
+              /></g
+            ></pattern
+          ></defs
+        >
+        <rect width="100%" height="100%" fill="url(#asaG)" />
+      </svg>
+    {/if}
+
+    <!-- 舞い散る装飾（桜びら＋金の粒） -->
+    {#if ambient.length > 0}
+      <div class="petals" aria-hidden="true">
+        {#each ambient as s, i (i)}<span style="position:absolute;{s}"
+          ></span>{/each}
+      </div>
+    {/if}
+
     <!-- ===== HUD ===== -->
     <div class="hud">
       {#if isTimeAttack}
@@ -444,6 +520,18 @@
     >
       <span class="watermark" aria-hidden="true">{stageWatermark}</span>
       <canvas class="fx-layer" bind:this={canvasEl} aria-hidden="true"></canvas>
+
+      {#if isTimeAttack}
+        <div class="ta-combo" aria-hidden="true">
+          {#if view.score.comboMultiplier > 1}
+            <div class="ta-flame kg-flame">🔥</div>
+          {/if}
+          <div class="ta-combo-num">
+            ×{view.score.comboMultiplier.toFixed(1)}
+          </div>
+          <div class="ta-combo-cap">COMBO</div>
+        </div>
+      {/if}
 
       {#if floatInfo}
         {#key floatInfo.key}
@@ -570,7 +658,9 @@
        手札が増減してもアクション行が画面下に固定される（ボタン位置が動かない）。 */
     display: flex;
     flex-direction: column;
-    min-height: calc(100dvh - 5rem);
+    /* ヘッダ＋#main 余白ぶんを差し引き、縦長でもページスクロールが出ないようにする。
+       svh（最小ビューポート＝ブラウザ chrome 表示時）基準でアドレスバー表示時も収める。 */
+    min-height: calc(100svh - 8.5rem);
     background: linear-gradient(
       180deg,
       var(--md-sys-color-surface),
@@ -600,6 +690,57 @@
       var(--kg-color-indigo-night-3)
     );
     border-color: rgba(212, 175, 55, 0.25);
+  }
+
+  /* 地紋（麻の葉/青海波）と舞い散る装飾は本文の背面に敷く。 */
+  .jimon {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .petals {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* タイムアタックのコンボ演出（炎＋大きな倍率）。ステージ上部中央。 */
+  .ta-combo {
+    position: absolute;
+    top: 0.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    text-align: center;
+    pointer-events: none;
+  }
+  .ta-flame {
+    font-size: 1.5rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 8px rgba(224, 121, 95, 0.8));
+  }
+  .ta-combo-num {
+    font-family: var(--md-ref-typeface-brand);
+    font-weight: 800;
+    font-size: 2rem;
+    line-height: 0.9;
+    color: var(--kg-color-gold-bright);
+    text-shadow: 0 0 16px rgba(212, 175, 55, 0.6);
+  }
+  .ta-combo-cap {
+    font-size: 0.55rem;
+    letter-spacing: 0.22em;
+    color: #aeb8d8;
+  }
+  /* TA はコンボ表示と重ならないよう、ステージ中身を少し下げる。 */
+  .screen.game.ta .prompt,
+  .screen.game.ta .learning-card {
+    margin-top: 3.5rem;
   }
 
   /* ===== HUD ===== */
@@ -959,12 +1100,23 @@
   .tray {
     position: relative;
     z-index: 3;
+    flex: none;
   }
   .tray-label {
     margin: 0 0 0.2rem;
     font-size: 0.62rem;
     letter-spacing: 0.04em;
     color: var(--md-sys-color-on-surface-variant);
+  }
+  /* 手札域は最初から2行ぶんを確保（高さ固定）。札が増えたら内部スクロールし、
+     アクション行の高さは動かさない（HandView の .hand を上書き）。 */
+  .tray :global(.hand) {
+    height: 9.6rem;
+    min-height: 9.6rem;
+    overflow-y: auto;
+    align-content: flex-start;
+    padding: 0.2rem 0;
+    scrollbar-width: thin;
   }
 
   .organize {

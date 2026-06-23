@@ -75,7 +75,7 @@
   .app-header {
     text-align: center;
     font-family: var(--md-ref-typeface-brand);
-    margin: 1.5rem 0 0.5rem;
+    margin: 0.9rem 0 0.4rem;
   }
   .brand-kicker {
     display: block;
@@ -94,8 +94,8 @@
   #main {
     font-family: var(--md-ref-typeface-plain);
     max-width: 40rem;
-    margin: 1rem auto;
-    padding: 0 1rem 2rem;
+    margin: 0.6rem auto;
+    padding: 0 1rem 0.8rem;
     text-align: center;
   }
   /* 全画面共通の和紙パネル。各 .screen は暗地の上の和紙カードとして統一する。
