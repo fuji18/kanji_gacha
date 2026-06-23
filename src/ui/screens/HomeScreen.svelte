@@ -117,6 +117,11 @@
 
 <section class="screen home">
   {#if step.kind === 'top'}
+    <div class="home-hero">
+      <span class="hero-badge" aria-hidden="true">合</span>
+      <span class="hero-sub">部品を集めて漢字を合体させる学習ゲーム</span>
+    </div>
+
     <h2>モードをえらぶ</h2>
 
     <ul class="levels">
@@ -127,12 +132,16 @@
           onclick={toGrade}
           aria-label="小学生モードをえらぶ"
         >
-          <span class="level-label"
-            ><Furigana text="小学生" reading="しょうがくせい" />モード</span
-          >
-          <span class="level-desc">小学校で習う漢字を学年ごとに完成</span>
+          <span class="level-main">
+            <span class="level-label"
+              ><Furigana text="小学生" reading="しょうがくせい" />モード</span
+            >
+            <span class="level-desc">小学校で習う漢字を学年ごとに完成</span>
+          </span>
           <span class="level-best"
-            >ベスト {$persistedStore.bestScores.elementary}</span
+            >ベスト <span class="best-num"
+              >{$persistedStore.bestScores.elementary}</span
+            ></span
           >
         </button>
       </li>
@@ -143,14 +152,18 @@
           onclick={toAdultCount}
           aria-label="大人モードをえらぶ"
         >
-          <span class="level-label"
-            ><Furigana text="大人" reading="おとな" />モード</span
-          >
-          <span class="level-desc"
-            >小学生漢字以外のすべて（中学以降の常用）</span
-          >
+          <span class="level-main">
+            <span class="level-label"
+              ><Furigana text="大人" reading="おとな" />モード</span
+            >
+            <span class="level-desc"
+              >小学生漢字以外のすべて（中学以降の常用）</span
+            >
+          </span>
           <span class="level-best"
-            >ベスト {$persistedStore.bestScores.juniorhigh}</span
+            >ベスト <span class="best-num"
+              >{$persistedStore.bestScores.juniorhigh}</span
+            ></span
           >
         </button>
       </li>
@@ -169,7 +182,9 @@
         >
         <span class="daily-level">{dailyLabel}</span>
       </span>
-      <span class="daily-best">ベスト {dailyBest}</span>
+      <span class="daily-best"
+        >ベスト <span class="best-num">{dailyBest}</span></span
+      >
     </button>
 
     <section class="ta-section">
@@ -187,7 +202,9 @@
           ><Furigana text="常用漢字" reading="じょうようかんじ" /></span
         >
         <span class="ta-best"
-          >ベスト {$persistedStore.timeAttackBest[TIME_ATTACK_LEVEL]}</span
+          >ベスト <span class="best-num"
+            >{$persistedStore.timeAttackBest[TIME_ATTACK_LEVEL]}</span
+          ></span
         >
       </button>
     </section>
@@ -334,9 +351,36 @@
     flex-direction: column;
     gap: 0.75rem;
   }
+  /* ブランドの一文（合バッジ＋タグライン）。 */
+  .home-hero {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0 0 0.8rem;
+  }
+  .hero-badge {
+    flex: none;
+    width: 2.6rem;
+    height: 2.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--md-sys-shape-corner-medium);
+    background: linear-gradient(160deg, var(--md-sys-color-primary), #9e2f23);
+    color: #fff3e4;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: 1.5rem;
+    box-shadow: 0 4px 12px rgba(192, 57, 43, 0.4);
+  }
+  .hero-sub {
+    text-align: left;
+    font-size: var(--md-sys-typescale-body-medium);
+    color: var(--md-sys-color-on-surface-variant);
+    line-height: 1.4;
+  }
   .level {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: 1fr auto;
     align-items: center;
     gap: 0.75rem;
     padding: 0.9rem 1.1rem;
@@ -346,20 +390,42 @@
   .levels li:nth-child(2) .level {
     border-left-color: var(--md-sys-color-primary);
   }
+  .level-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
   .level-label {
     font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
-    font-size: var(--md-sys-typescale-title-size);
+    font-size: var(--md-sys-typescale-title-large);
     color: var(--md-sys-color-on-surface);
   }
   .level-desc {
     color: var(--md-sys-color-on-surface-variant);
-    font-size: var(--md-sys-typescale-label-size);
+    font-size: var(--md-sys-typescale-body-medium);
+    line-height: 1.45;
   }
-  .level-best {
-    font-variant-numeric: tabular-nums;
+  /* ベスト：小さな「ベスト」＋大きな金の数字（mock 準拠）。 */
+  .level-best,
+  .daily-best,
+  .ta-best,
+  .review-count {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
     white-space: nowrap;
+    font-size: var(--md-sys-typescale-label-medium);
     color: var(--md-sys-color-on-surface-variant);
+  }
+  .best-num {
+    font-family: var(--md-ref-typeface-brand);
+    font-weight: 800;
+    font-size: var(--md-sys-typescale-title-large);
+    color: var(--md-sys-color-tertiary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
   }
   .daily {
     padding: 0.8rem 1.1rem;
@@ -386,7 +452,7 @@
     color: var(--md-sys-color-on-surface);
   }
   .daily-level {
-    font-size: var(--md-sys-typescale-label-size);
+    font-size: var(--md-sys-typescale-body-medium);
     color: var(--md-sys-color-on-surface-variant);
   }
   .daily-best {
@@ -404,7 +470,7 @@
     margin: 0 0 0.2rem;
   }
   .ta-lead {
-    font-size: var(--md-sys-typescale-label-size);
+    font-size: var(--md-sys-typescale-body-medium);
     color: var(--md-sys-color-on-surface-variant);
     margin: 0 0 0.6rem;
   }
@@ -436,7 +502,7 @@
     margin: 0 0 0.2rem;
   }
   .review-lead {
-    font-size: var(--md-sys-typescale-label-size);
+    font-size: var(--md-sys-typescale-body-medium);
     color: var(--md-sys-color-on-surface-variant);
     margin: 0 0 0.6rem;
   }
