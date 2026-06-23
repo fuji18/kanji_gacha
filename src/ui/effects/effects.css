@@ -202,6 +202,20 @@
     transform: scale(1.15);
   }
 }
+@keyframes kg-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 4px) scale(0.8);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -46px) scale(1);
+  }
+}
 @keyframes kg-flame {
   0%,
   100% {

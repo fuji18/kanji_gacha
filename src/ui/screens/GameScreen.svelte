@@ -116,6 +116,11 @@
   } | null>(null);
   let floatSeq = 0;
 
+  // 合体成功時に浮上する「+N」ポップ（学習カードとは別の即時フィードバック・handoff design）。
+  let pop = $state<{ text: string; key: number } | null>(null);
+  let popSeq = 0;
+  let popTimer: ReturnType<typeof setTimeout> | null = null;
+
   // ステージ背面の透かし（完成字 or 既定「和」）。
   const stageWatermark = $derived(floatInfo?.char ?? '和');
 
@@ -171,6 +176,7 @@
     field?.stop();
     if (shakeTimer !== null) clearTimeout(shakeTimer);
     if (tickTimer !== null) clearInterval(tickTimer);
+    if (popTimer !== null) clearTimeout(popTimer);
     clearRevealTimer();
   });
 
@@ -201,6 +207,15 @@
       gained,
       key: floatSeq,
     };
+    // 「+N」ポップ（1.1s で自然消滅）。
+    popSeq += 1;
+    const myKey = popSeq;
+    pop = { text: `+${gained}`, key: myKey };
+    if (popTimer !== null) clearTimeout(popTimer);
+    popTimer = setTimeout(() => {
+      if (pop?.key === myKey) pop = null;
+      popTimer = null;
+    }, 1100);
   }
 
   function fireMiss(): void {
@@ -564,6 +579,12 @@
         </div>
       {/if}
 
+      {#if pop}
+        {#key pop.key}
+          <div class="score-pop" aria-hidden="true">{pop.text}</div>
+        {/key}
+      {/if}
+
       {#if reveal}
         {#key reveal.key}
           <EmakimonoReveal
@@ -660,7 +681,7 @@
     flex-direction: column;
     /* ヘッダ＋#main 余白ぶんを差し引き、縦長でもページスクロールが出ないようにする。
        svh（最小ビューポート＝ブラウザ chrome 表示時）基準でアドレスバー表示時も収める。 */
-    min-height: calc(100svh - 8.5rem);
+    min-height: calc(100svh - 9.5rem);
     background: linear-gradient(
       180deg,
       var(--md-sys-color-surface),
@@ -972,6 +993,34 @@
     height: 100%;
     pointer-events: none;
     z-index: 2;
+  }
+  /* タイムアタックのステージに斜めの金の光沢を重ねる（handoff design）。 */
+  .screen.game.ta .stage {
+    background-image: repeating-linear-gradient(
+      115deg,
+      transparent 0 18px,
+      rgba(212, 175, 55, 0.05) 18px 19px
+    );
+  }
+  /* 合体成功の「+N」ポップ。 */
+  .score-pop {
+    position: absolute;
+    left: 50%;
+    bottom: 26%;
+    z-index: 6;
+    pointer-events: none;
+    font-family: var(--md-ref-typeface-brand);
+    font-weight: 800;
+    font-size: 1.9rem;
+    color: var(--kg-color-gold-bright);
+    text-shadow: 0 0 12px rgba(212, 175, 55, 0.7);
+    animation: kg-pop 1.1s ease forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .score-pop {
+      animation: none;
+      opacity: 0;
+    }
   }
 
   /* 合体プロンプト（合 の輪＋誘導文）。 */
