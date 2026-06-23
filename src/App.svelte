@@ -135,31 +135,32 @@
       var(--kg-color-gold-bright)
     );
   }
-  /* アクション行：本文との区切り罫を入れて視覚的に分離する。 */
+  /* アクション行：本文との区切り罫を入れて視覚的に分離する（Game 画面の基本形）。 */
   :global(.screen .actions) {
     display: flex;
     flex-wrap: wrap;
     gap: 0.6rem;
     justify-content: center;
-    margin-top: 1.25rem;
-    padding-top: 0.9rem;
+    margin-top: 1rem;
+    padding-top: 0.8rem;
     border-top: 1px solid var(--md-sys-color-outline-variant);
   }
-  /* スマホ：主要アクションを画面下に固定（親指リーチ）。半透明和紙＋セーフエリア対応。
-     Game 画面は独自レイアウトのため対象外（:not(.game)）。 */
-  @media (max-width: 640px) {
-    :global(.screen:not(.game)) {
-      display: flex;
-      flex-direction: column;
-      min-height: calc(100dvh - 4.5rem);
-    }
-    :global(.screen:not(.game) .actions) {
-      position: sticky;
-      bottom: 0;
-      margin-top: auto;
-      padding: 0.8rem 0.2rem;
-      padding-bottom: max(0.8rem, env(safe-area-inset-bottom));
-      background: var(--kg-surface-bar);
-    }
+  /* 全画面（Game 以外）を handoff モック構造に合わせる：固定高のスクロール容器。
+     - ページ自体はスクロールしない（縦長でもページスクロールなし）。
+     - 長い内容は画面内部だけスクロールし、下部アクションバーは常に最下部に固定。
+     - 内容が短い時もバーは最下部に収まり、ダークなページ余白を作らない。 */
+  :global(.screen:not(.game)) {
+    display: flex;
+    flex-direction: column;
+    height: calc(100svh - 9rem);
+    overflow-y: auto;
+  }
+  :global(.screen:not(.game) .actions) {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    padding: 0.8rem 0.2rem;
+    padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
+    background: var(--kg-surface-bar);
   }
 </style>
