@@ -101,6 +101,9 @@
   /* 全画面共通の和紙パネル。各 .screen は暗地の上の和紙カードとして統一する。
      GameScreen 等が独自に背景/余白を上書きする場合は、より具体的なセレクタが優先される。 */
   :global(.screen) {
+    /* 装飾レイヤー（Petals, z-index:-1）を背面に閉じ込めるための stacking context。 */
+    position: relative;
+    isolation: isolate;
     /* 暗地の body から継承する明色テキストを、和紙パネル内では墨色へ戻す
        （明示色を持たない素のテキストが和紙上で読めるようにする）。 */
     color: var(--md-sys-color-on-surface);

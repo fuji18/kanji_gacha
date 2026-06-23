@@ -5,6 +5,7 @@
   import SpeakButton from '../components/SpeakButton.svelte';
   import StrokeKanji from '../components/StrokeKanji.svelte';
   import MaterialButton from '../components/MaterialButton.svelte';
+  import Petals from '../components/Petals.svelte';
 
   // 図鑑画面（T-020 / PRD F7・学習帳化 T-036）。発見漢字の一覧・収集率・学年別進捗・筆順を表示する。
   // 漢字の読み/意味/画数/部品と到達可能N は SessionManager 経由で取得（ui→data 直接アクセス回避）。
@@ -82,6 +83,7 @@
 </script>
 
 <section class="screen zukan">
+  <Petals />
   <h2>図鑑</h2>
 
   <div class="rate">
@@ -300,12 +302,12 @@
     color: var(--md-sys-color-on-surface-variant);
   }
   .card-yomi {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     color: var(--md-sys-color-on-surface-variant);
     text-align: center;
   }
   .card-mean {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     color: var(--md-sys-color-on-surface-variant);
     text-align: center;
   }
@@ -324,7 +326,7 @@
   }
   .card-strokes,
   .card-parts {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     color: var(--md-sys-color-on-surface-variant);
     text-align: center;
   }
@@ -356,7 +358,7 @@
     max-width: none;
   }
   .grade-num {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     color: var(--md-sys-color-on-surface-variant);
     white-space: nowrap;

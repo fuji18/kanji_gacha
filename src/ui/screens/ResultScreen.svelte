@@ -4,6 +4,7 @@
   import { buildShareText } from '../share/shareText';
   import { shareOrCopy } from '../share/share';
   import MaterialButton from '../components/MaterialButton.svelte';
+  import Petals from '../components/Petals.svelte';
 
   // Result 画面（T-019 / PRD F6・F9）。プレイ結果の表示とリトライ・共有・ホーム導線。
   // 結果は SessionManager.getResult() から取得（型推論で domain/data を直接 import しない）。
@@ -73,6 +74,7 @@
 </script>
 
 <section class="screen result">
+  <Petals />
   <h2>結果</h2>
 
   {#if result === null}

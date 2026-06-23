@@ -4,6 +4,7 @@
   import { persistedStore } from '../../app/stores/persistedStore';
   import Furigana from '../components/Furigana.svelte';
   import MaterialButton from '../components/MaterialButton.svelte';
+  import Petals from '../components/Petals.svelte';
 
   // Home 画面（T-016 / PRD F3・F9）。レベル選択とエントリ導線を提供する。
   // SessionManager は App から prop で受け取る（ui→app の依存のみ。domain/data は型も含め直接 import しない）。
@@ -116,6 +117,7 @@
 </script>
 
 <section class="screen home">
+  <Petals />
   {#if step.kind === 'top'}
     <div class="home-hero">
       <span class="hero-badge" aria-hidden="true">合</span>
@@ -449,6 +451,7 @@
   .daily-title {
     font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
+    font-size: var(--md-sys-typescale-title-large);
     color: var(--md-sys-color-on-surface);
   }
   .daily-level {
@@ -485,6 +488,7 @@
   .ta-label {
     font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
+    font-size: var(--md-sys-typescale-title-large);
     color: var(--md-sys-color-on-surface);
   }
   .ta-best {
@@ -518,6 +522,7 @@
   .review-label {
     font-family: var(--md-ref-typeface-brand);
     font-weight: 700;
+    font-size: var(--md-sys-typescale-title-large);
     color: var(--md-sys-color-on-surface);
   }
   .review-count {

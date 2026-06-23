@@ -1,6 +1,7 @@
 <script lang="ts">
   import { navigate } from '../../app/stores/routeStore';
   import MaterialButton from '../components/MaterialButton.svelte';
+  import Petals from '../components/Petals.svelte';
   // About 画面（T-021 / PRD F10）。データ出典のクレジットを常設表示する（CC BY-SA 継承）。
   // 静的表示のみ（SessionManager 不要）。文言は整理書6.1 雛形＋実データ（KanjiVG）に整合。
   const CC_BY_SA_4 = 'https://creativecommons.org/licenses/by-sa/4.0/';
@@ -11,6 +12,7 @@
 </script>
 
 <section class="screen about">
+  <Petals />
   <h2>About</h2>
 
   <p class="intro">漢字合体ガチャ — 部品を集めて漢字を合体させる学習ゲーム。</p>
