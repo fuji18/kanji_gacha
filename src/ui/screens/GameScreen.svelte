@@ -566,6 +566,11 @@
 
   .screen.game {
     position: relative;
+    /* 縦に伸びる flex カラムで画面高を満たす。ステージ（中央）を可変にして余白を吸わせ、
+       手札が増減してもアクション行が画面下に固定される（ボタン位置が動かない）。 */
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - 5rem);
     background: linear-gradient(
       180deg,
       var(--md-sys-color-surface),
@@ -785,7 +790,10 @@
   /* ===== ステージ ===== */
   .stage {
     position: relative;
-    min-height: 14rem;
+    /* 余剰高を吸う可変領域。縦長では伸びて中央に収まり、手札増減ぶんはここが伸縮して
+       下のアクション行を動かさない。短い画面では min-height まで縮む。 */
+    flex: 1 1 0;
+    min-height: 9rem;
     margin: 0.2rem 0 0.5rem;
     border-radius: var(--md-sys-shape-corner-large);
     background: color-mix(
