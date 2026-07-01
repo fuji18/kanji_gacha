@@ -8,6 +8,8 @@
     rarity: number;
     selected?: boolean;
     hinted?: boolean;
+    /** 選択順（1始まり）。複数選択の合体順を札に示す。未選択は null。 */
+    selectionOrder?: number | null;
     onToggle?: () => void;
   }
   let {
@@ -15,6 +17,7 @@
     rarity,
     selected = false,
     hinted = false,
+    selectionOrder = null,
     onToggle,
   }: Props = $props();
 
@@ -44,6 +47,10 @@
   style={`--rarity-color: ${color}`}
   onclick={onToggle}
 >
+  {#if selected && selectionOrder !== null}<span
+      class="order-badge"
+      aria-hidden="true">{selectionOrder}</span
+    >{/if}
   {#if sealLabel}<span class="seal" aria-hidden="true">{sealLabel}</span>{/if}
   <span class="kanji">{char}</span>
 </button>
@@ -76,6 +83,27 @@
     font-size: 2.4rem;
     line-height: 1;
     color: var(--md-sys-color-on-surface);
+  }
+  /* 選択順バッジ（左上）。複数選択時の合体順を示す。 */
+  .order-badge {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    z-index: 2;
+    min-width: 1.05rem;
+    height: 1.05rem;
+    padding: 0 0.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--md-sys-color-on-primary);
+    background: var(--md-sys-color-primary);
+    border-radius: var(--md-sys-shape-corner-full);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   }
   .seal {
     position: absolute;

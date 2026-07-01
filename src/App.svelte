@@ -28,6 +28,7 @@
 </script>
 
 <header class="app-header">
+  <span class="brand-kicker">KANJI&nbsp;FUSION&nbsp;GACHA</span>
   <h1>漢字合体ガチャ</h1>
 </header>
 
@@ -53,21 +54,86 @@
 {/if}
 
 <style>
+  /* ページ全体の地：墨地に金/藍のほのかな放射光（handoff design の余白配色）。
+     和紙の各画面（.screen）はこの暗地の上に浮くカードとして見せる。 */
+  :global(body) {
+    background-color: var(--kg-color-ink-bg, #211d17);
+    background-image:
+      radial-gradient(
+        circle at 14% 0%,
+        rgba(120, 95, 55, 0.2),
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at 88% 100%,
+        rgba(44, 62, 107, 0.28),
+        transparent 52%
+      );
+    background-attachment: fixed;
+    color: var(--md-sys-color-surface);
+  }
   .app-header {
     text-align: center;
-    font-family: system-ui, sans-serif;
+    font-family: var(--md-ref-typeface-brand);
     margin: 1.5rem 0 0.5rem;
   }
+  .brand-kicker {
+    display: block;
+    font-family: var(--md-ref-typeface-brand);
+    font-size: 0.7rem;
+    letter-spacing: 0.42em;
+    color: var(--kg-color-gold-bright);
+    margin-bottom: 0.3rem;
+  }
   .app-header h1 {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     margin: 0;
+    color: #f5f1e6;
+    letter-spacing: 0.04em;
   }
   #main {
-    font-family: system-ui, sans-serif;
+    font-family: var(--md-ref-typeface-plain);
     max-width: 40rem;
     margin: 1rem auto;
-    padding: 0 1rem;
+    padding: 0 1rem 2rem;
     text-align: center;
+  }
+  /* 全画面共通の和紙パネル。各 .screen は暗地の上の和紙カードとして統一する。
+     GameScreen 等が独自に背景/余白を上書きする場合は、より具体的なセレクタが優先される。 */
+  :global(.screen) {
+    /* 暗地の body から継承する明色テキストを、和紙パネル内では墨色へ戻す
+       （明示色を持たない素のテキストが和紙上で読めるようにする）。 */
+    color: var(--md-sys-color-on-surface);
+    background: linear-gradient(
+      180deg,
+      var(--md-sys-color-surface),
+      var(--md-sys-color-surface-container-low)
+    );
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: var(--md-sys-shape-corner-large);
+    box-shadow: var(--md-sys-elevation-2);
+    padding: 1.1rem 1.1rem 1.3rem;
+  }
+  /* 画面見出しは金の圏点（上罫）で和の格を添える。 */
+  :global(.screen > h2) {
+    position: relative;
+    display: inline-block;
+    padding-top: 0.4rem;
+  }
+  :global(.screen > h2)::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2.2rem;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(
+      90deg,
+      var(--kg-color-gold-deep),
+      var(--kg-color-gold-bright)
+    );
   }
   :global(.screen .actions) {
     display: flex;

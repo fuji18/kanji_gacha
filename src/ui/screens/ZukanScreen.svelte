@@ -256,8 +256,13 @@
     padding: 0;
     margin: 0.5rem 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+    /* design: 発見カードは3列、未発見マスクは6列。 */
+    grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
+  }
+  .grid.masked {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.4rem;
   }
   .card {
     background: linear-gradient(

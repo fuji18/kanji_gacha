@@ -132,10 +132,13 @@
       <p class="share-note" role="status">{shareNote}</p>
     {/if}
 
-    <nav class="actions">
-      <button type="button" onclick={retry}>もう一回</button>
-      <button type="button" onclick={share} disabled={sharing}>シェア</button>
-      <button type="button" onclick={home}>ホーム</button>
+    <nav class="actions result-actions">
+      <button type="button" class="act-primary" onclick={retry}>もう一回</button
+      >
+      <button type="button" class="act-gold" onclick={share} disabled={sharing}
+        >シェア</button
+      >
+      <button type="button" class="act-plain" onclick={home}>ホーム</button>
     </nav>
   {/if}
 </section>
@@ -244,5 +247,55 @@
   .share-note {
     color: var(--md-sys-color-on-surface-variant);
     font-size: var(--md-sys-typescale-body-size);
+  }
+
+  /* アクション行（design: 朱3D もう一回 / 金枠 シェア / 白枠 ホーム）。 */
+  .result-actions {
+    align-items: stretch;
+  }
+  .result-actions button {
+    min-height: 2.9rem;
+    font-family: var(--md-ref-typeface-brand);
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: var(--md-sys-shape-corner-medium);
+    cursor: pointer;
+  }
+  .act-primary {
+    flex: 1;
+    color: #fff3e4;
+    background: linear-gradient(
+      180deg,
+      var(--kg-color-vermilion-bright),
+      var(--kg-color-vermilion-deep)
+    );
+    border: none;
+    box-shadow: 0 4px 0 #7d2c1c;
+  }
+  .act-primary:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #7d2c1c;
+  }
+  .act-gold {
+    flex: 1;
+    color: #7a5713;
+    background: linear-gradient(160deg, #fffaf0, #f6edd6);
+    border: 1px solid var(--kg-color-gold-deep);
+  }
+  .act-gold:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .act-plain {
+    flex: none;
+    padding: 0 1rem;
+    color: var(--md-sys-color-on-surface);
+    background: var(--md-sys-color-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .act-primary {
+      transition: none;
+    }
   }
 </style>

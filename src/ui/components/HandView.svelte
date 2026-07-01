@@ -8,6 +8,8 @@
     rarity: number;
     selected: boolean;
     hinted: boolean;
+    /** 選択順（1始まり）。未選択は null。 */
+    selectionOrder?: number | null;
   }
   interface Props {
     items: HandItem[];
@@ -26,6 +28,7 @@
         rarity={item.rarity}
         selected={item.selected}
         hinted={item.hinted}
+        selectionOrder={item.selectionOrder ?? null}
         onToggle={() => onToggle(item.instanceId)}
       />
     {/each}

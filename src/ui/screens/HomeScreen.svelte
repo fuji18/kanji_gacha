@@ -161,10 +161,13 @@
       onclick={startDaily}
       aria-label={`今日のお題（${dailyLabel}）でゲーム開始`}
     >
-      <span class="daily-title"
-        ><Furigana text="今日のお題" reading="きょうのおだい" /></span
-      >
-      <span class="daily-level">{dailyLabel}</span>
+      <span class="daily-ico" aria-hidden="true">🎴</span>
+      <span class="daily-main">
+        <span class="daily-title"
+          ><Furigana text="今日のお題" reading="きょうのおだい" /></span
+        >
+        <span class="daily-level">{dailyLabel}</span>
+      </span>
       <span class="daily-best">ベスト {dailyBest}</span>
     </button>
 
@@ -346,11 +349,21 @@
   .daily {
     padding: 0.8rem 1.1rem;
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.75rem;
     /* 今日のお題は特別感：金の枠アクセント。 */
-    border: 1px solid var(--md-sys-color-tertiary);
+    border: 1.5px solid var(--md-sys-color-tertiary);
+  }
+  .daily-ico {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+  .daily-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    text-align: left;
   }
   .daily-title {
     font-family: var(--md-ref-typeface-brand);
