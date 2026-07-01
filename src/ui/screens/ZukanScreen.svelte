@@ -4,6 +4,8 @@
   import { persistedStore } from '../../app/stores/persistedStore';
   import SpeakButton from '../components/SpeakButton.svelte';
   import StrokeKanji from '../components/StrokeKanji.svelte';
+  import MaterialButton from '../components/MaterialButton.svelte';
+  import Petals from '../components/Petals.svelte';
 
   // 図鑑画面（T-020 / PRD F7・学習帳化 T-036）。発見漢字の一覧・収集率・学年別進捗・筆順を表示する。
   // 漢字の読み/意味/画数/部品と到達可能N は SessionManager 経由で取得（ui→data 直接アクセス回避）。
@@ -81,6 +83,7 @@
 </script>
 
 <section class="screen zukan">
+  <Petals />
   <h2>図鑑</h2>
 
   <div class="rate">
@@ -167,7 +170,12 @@
   {/if}
 
   <nav class="actions">
-    <button type="button" onclick={() => navigate('home')}>戻る</button>
+    <MaterialButton
+      variant="outlined"
+      color="secondary"
+      block
+      onclick={() => navigate('home')}>戻る</MaterialButton
+    >
   </nav>
 
   {#if selected}
@@ -213,7 +221,7 @@
     color: var(--md-sys-color-on-surface);
   }
   .rate {
-    margin: 0.5rem 0 1.25rem;
+    margin: 0.4rem 0 0.9rem;
   }
   .rate-num {
     font-size: var(--md-sys-typescale-title-size);
@@ -294,12 +302,12 @@
     color: var(--md-sys-color-on-surface-variant);
   }
   .card-yomi {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     color: var(--md-sys-color-on-surface-variant);
     text-align: center;
   }
   .card-mean {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     color: var(--md-sys-color-on-surface-variant);
     text-align: center;
   }
@@ -318,13 +326,13 @@
   }
   .card-strokes,
   .card-parts {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     color: var(--md-sys-color-on-surface-variant);
     text-align: center;
   }
   /* 学年別収集率（T-036） */
   .grades {
-    margin: 0 0 1.25rem;
+    margin: 0 0 0.9rem;
   }
   .grades-title {
     font-family: var(--md-ref-typeface-brand);
@@ -350,7 +358,7 @@
     max-width: none;
   }
   .grade-num {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     color: var(--md-sys-color-on-surface-variant);
     white-space: nowrap;
@@ -379,14 +387,24 @@
   }
   .stroke-close {
     position: absolute;
-    top: 0.3rem;
-    right: 0.5rem;
+    top: 0.2rem;
+    right: 0.2rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: none;
     background: none;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
     line-height: 1;
     color: var(--md-sys-color-on-surface-variant);
     cursor: pointer;
+  }
+  .stroke-close:focus-visible {
+    outline: 3px solid var(--kg-color-gold-bright);
+    outline-offset: -3px;
+    border-radius: var(--md-sys-shape-corner-small);
   }
   .stroke-yomi {
     margin: 0.4rem 0 0.2rem;

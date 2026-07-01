@@ -62,9 +62,14 @@
     );
     color: #fff3e4;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
     transition:
       transform 0.1s ease,
       filter 0.1s ease;
+  }
+  .gacha-scroll:focus-visible {
+    outline: 3px solid var(--kg-color-gold-bright);
+    outline-offset: 2px;
   }
   /* 巻物の軸（両端の濃い棒）。 */
   .rod {

@@ -75,7 +75,7 @@
   .app-header {
     text-align: center;
     font-family: var(--md-ref-typeface-brand);
-    margin: 1.5rem 0 0.5rem;
+    margin: 0.9rem 0 0.4rem;
   }
   .brand-kicker {
     display: block;
@@ -94,13 +94,16 @@
   #main {
     font-family: var(--md-ref-typeface-plain);
     max-width: 40rem;
-    margin: 1rem auto;
-    padding: 0 1rem 2rem;
+    margin: 0.6rem auto;
+    padding: 0 1rem 0.8rem;
     text-align: center;
   }
   /* 全画面共通の和紙パネル。各 .screen は暗地の上の和紙カードとして統一する。
      GameScreen 等が独自に背景/余白を上書きする場合は、より具体的なセレクタが優先される。 */
   :global(.screen) {
+    /* 装飾レイヤー（Petals, z-index:-1）を背面に閉じ込めるための stacking context。 */
+    position: relative;
+    isolation: isolate;
     /* 暗地の body から継承する明色テキストを、和紙パネル内では墨色へ戻す
        （明示色を持たない素のテキストが和紙上で読めるようにする）。 */
     color: var(--md-sys-color-on-surface);
@@ -112,7 +115,7 @@
     border: 1px solid var(--md-sys-color-outline-variant);
     border-radius: var(--md-sys-shape-corner-large);
     box-shadow: var(--md-sys-elevation-2);
-    padding: 1.1rem 1.1rem 1.3rem;
+    padding: 0.9rem 1rem 1rem;
   }
   /* 画面見出しは金の圏点（上罫）で和の格を添える。 */
   :global(.screen > h2) {
@@ -135,16 +138,32 @@
       var(--kg-color-gold-bright)
     );
   }
+  /* アクション行：本文との区切り罫を入れて視覚的に分離する（Game 画面の基本形）。 */
   :global(.screen .actions) {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
+    gap: 0.6rem;
     justify-content: center;
-    margin-top: 1.25rem;
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--md-sys-color-outline-variant);
   }
-  :global(.screen .actions button) {
-    padding: 0.6rem 1.4rem;
-    font-size: 1rem;
-    cursor: pointer;
+  /* 全画面（Game 以外）を handoff モック構造に合わせる：固定高のスクロール容器。
+     - ページ自体はスクロールしない（縦長でもページスクロールなし）。
+     - 長い内容は画面内部だけスクロールし、下部アクションバーは常に最下部に固定。
+     - 内容が短い時もバーは最下部に収まり、ダークなページ余白を作らない。 */
+  :global(.screen:not(.game)) {
+    display: flex;
+    flex-direction: column;
+    height: calc(100svh - 9rem);
+    overflow-y: auto;
+  }
+  :global(.screen:not(.game) .actions) {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    padding: 0.8rem 0.2rem;
+    padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
+    background: var(--kg-surface-bar);
   }
 </style>

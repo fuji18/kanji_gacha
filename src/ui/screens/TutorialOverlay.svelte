@@ -159,7 +159,7 @@
   }
   .step-counter {
     margin: 0 0 1rem;
-    font-size: 0.66rem;
+    font-size: 0.75rem;
     letter-spacing: 0.14em;
     color: #aeb8d8;
     text-align: left;
@@ -295,6 +295,12 @@
   .primary:active {
     transform: translateY(2px);
     box-shadow: 0 2px 0 #7d2c1c;
+  }
+  .primary:focus-visible,
+  .tile:focus-visible,
+  .skip:focus-visible {
+    outline: 3px solid var(--kg-color-gold-bright);
+    outline-offset: 2px;
   }
   .skip {
     position: absolute;
