@@ -12,6 +12,7 @@ import type {
   ZukanState,
 } from '../domain/types';
 import {
+  DISCARD_COST,
   GACHA_COUNT,
   HAND_CAP,
   HINT_COST,
@@ -553,43 +554,79 @@ export class SessionManager {
   }
 
   /**
-   * 捨てて引き直す（PRD F5）。RescueService に委譲（手札1枚削除＋レベル別コスト＋補充ガチャ）。
-   * 実行できた場合のみ KPI を加算する（対象 instanceId が手札から消えたかで判定）。
+   * 手札を上限まで自動で引く（開始時の初期補充・UX）。`playing` かつ空きと残がある限り
+   * `pullGacha` を反復する。途中で終了判定に達したら（phase!=='playing'）停止する。
+   * デイリー決定性は `pullGacha` の順序引きに従うため、シードから再現可能。
+   * 二重補充を避けるため、UI 側は手札が空のとき一度だけ呼ぶこと（GameScreen onMount）。
    */
-  discardAndDraw(s: GameSession, instanceId: string): void {
+  fillHand(s: GameSession): void {
+    if (s.phase !== 'playing') return;
+    // canPullGacha が false（手札上限 or 残0）になるか、終了したら止まる（無限ループ防止）。
+    while (s.phase === 'playing' && this.canPullGacha(s)) {
+      this.pullGacha(s);
+    }
+  }
+
+  /**
+   * 交換（旧「捨てて引き直す」・PRD F5）。選択した **1枚以上** を一度に交換する（一括交換）。
+   * 交換後の手札枚数は不変（選択枚数ぶんを引き直す）。実行できた枚数を KPI に加算する。
+   *
+   *  - 達成型（deck）：選択を山札へ戻して切り直し、同数を引き直す（部品を場から失わない）。
+   *  - タイムアタック：レベル別コスト×枚数を一括で確認し、不足なら no-op（消費なし）。
+   *
+   * @param instanceIds 交換する手札部品の instanceId 群（手札に無いものは無視）
+   */
+  exchangeCards(s: GameSession, instanceIds: string[]): void {
     if (s.phase !== 'playing') return;
 
+    const idSet = new Set(instanceIds);
+    const targets = s.hand.filter((h) => idSet.has(h.instanceId));
+    if (targets.length === 0) {
+      this.publish(); // 対象なし → no-op（防御）
+      return;
+    }
+
     if (s.gameMode === 'deck') {
-      // 達成型（T-029）：手札1枚を捨てて**山札に戻し**、シャッフルして別の1枚を引く。
+      // 達成型（T-029）：選択枚数を**山札に戻し**、切り直して同数を引き直す。
       // 部品を場から失わないため、N字すべてを完成できる状態が保たれる。
-      const idx = s.hand.findIndex((h) => h.instanceId === instanceId);
-      if (idx === -1) {
-        this.publish();
-        return;
-      }
-      const [removed] = s.hand.splice(idx, 1);
-      s.deck.push(removed.partId); // 山札へ返却
+      s.hand = s.hand.filter((h) => !idSet.has(h.instanceId));
+      for (const t of targets) s.deck.push(t.partId); // 山札へ返却
       s.deck = this.shuffle(s.deck); // 戻した札を含めて切り直す
-      const partId = s.deck.pop();
-      if (partId !== undefined) {
+      for (let i = 0; i < targets.length; i++) {
+        const partId = s.deck.pop();
+        if (partId === undefined) break; // 山札が尽きたら引ける分だけ
         s.hand.push({ instanceId: this.nextId(), partId });
       }
       s.gachaRemaining = s.deck.length;
-      s.stats.discardUsed += 1;
+      s.stats.discardUsed += targets.length;
       this.checkGameEnd(s);
       this.publish();
       return;
     }
 
-    // タイムアタック：従来の救済（補充プール抽選＋レベル別コスト）。
+    // タイムアタック：従来の救済（補充プール抽選＋レベル別コスト）を枚数ぶん適用。
+    // 「実行できないときは消費もしない」を徹底：総コストを先に確認し、不足なら no-op。
     if (this.rescue === null) return;
-    const existed = s.hand.some((h) => h.instanceId === instanceId);
-    this.rescue.discardAndDraw(s, instanceId, this.rng);
-    const removed = existed && !s.hand.some((h) => h.instanceId === instanceId);
-    if (removed) s.stats.discardUsed += 1;
+    const totalCost = DISCARD_COST[s.level] * targets.length;
+    if (s.gachaRemaining < totalCost) {
+      this.publish();
+      return;
+    }
+    for (const t of targets) {
+      this.rescue.discardAndDraw(s, t.instanceId, this.rng);
+    }
+    s.stats.discardUsed += targets.length;
 
     this.checkGameEnd(s);
     this.publish();
+  }
+
+  /**
+   * 交換（1枚・後方互換）。`exchangeCards` へ委譲する。
+   * @param instanceId 交換する手札部品の instanceId
+   */
+  discardAndDraw(s: GameSession, instanceId: string): void {
+    this.exchangeCards(s, [instanceId]);
   }
 
   /**

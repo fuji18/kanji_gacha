@@ -31,7 +31,7 @@ export async function combineOnce(page: Page): Promise<boolean> {
     }
     if ((await page.locator('.chip').count()) >= 12) {
       await page.locator('.chip').first().click();
-      await page.getByRole('button', { name: '捨てて引き直す' }).click();
+      await page.getByRole('button', { name: '交換' }).click();
     }
   }
   return false;
@@ -41,7 +41,7 @@ export async function combineOnce(page: Page): Promise<boolean> {
 export async function playToResult(page: Page): Promise<void> {
   const gacha = page.getByRole('button', { name: /ガチャ/ });
   const hintBtn = page.getByRole('button', { name: 'ヒント' });
-  const discardBtn = page.getByRole('button', { name: '捨てて引き直す' });
+  const discardBtn = page.getByRole('button', { name: '交換' });
   const feedback = page.getByTestId('feedback');
   const result = page.getByRole('heading', { name: '結果' });
   for (let i = 0; i < 300; i++) {

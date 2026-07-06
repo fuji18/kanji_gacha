@@ -13,7 +13,11 @@ import {
   type StorageLike,
 } from '../../../src/data/StorageRepository';
 import { dailySeed, todayYmdJst } from '../../../src/domain/rng/dailySeed';
-import { GACHA_COUNT, TIME_ATTACK } from '../../../src/domain/constants';
+import {
+  GACHA_COUNT,
+  HAND_CAP,
+  TIME_ATTACK,
+} from '../../../src/domain/constants';
 import type {
   CombineEntry,
   GameSession,
@@ -338,6 +342,61 @@ describe('SessionManager 救済（deck モード）', () => {
     expect(s.stats.discardUsed).toBe(0);
     expect(s.hand).toHaveLength(2);
     expect(s.deck).toHaveLength(1);
+  });
+
+  it('exchangeCards：複数選択を一括交換（枚数不変・山札総数も不変・discardUsed+=枚数）', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = ['ki', 'kuchi', 'onna'];
+    setHand(s, ['onna', 'ko', 'kuchi']); // t0,t1,t2
+    sm.exchangeCards(s, ['t0', 't2']); // 2枚を一括交換
+    expect(s.hand).toHaveLength(3); // 削除2＋補充2＝枚数不変
+    expect(s.hand.some((h) => h.instanceId === 't0')).toBe(false);
+    expect(s.hand.some((h) => h.instanceId === 't2')).toBe(false);
+    expect(s.hand.some((h) => h.instanceId === 't1')).toBe(true); // 非選択は残る
+    // 戻し2＋引き2 で山札総数は不変
+    expect(s.deck).toHaveLength(3);
+    expect(s.gachaRemaining).toBe(3);
+    expect(s.stats.discardUsed).toBe(2); // 交換枚数ぶん加算
+    // 交換した部品は場（手札∪山札）から失われない
+    const field = [...s.deck, ...s.hand.map((h) => h.partId)];
+    expect(field.filter((p) => p === 'onna').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('exchangeCards：対象0件は no-op（discardUsed 不変）', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = ['ki'];
+    setHand(s, ['ki', 'kuchi']);
+    sm.exchangeCards(s, ['nope1', 'nope2']);
+    expect(s.stats.discardUsed).toBe(0);
+    expect(s.hand).toHaveLength(2);
+    expect(s.deck).toHaveLength(1);
+  });
+
+  it('fillHand：手札を上限（HAND_CAP=12）まで引いて止まる（山札が十分ある場合）', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    // 上限超の山札を用意（ki を 20 枚）。ki+ki は合体可能なので詰み終了しない。
+    s.deck = Array.from({ length: 20 }, () => 'ki');
+    s.hand = [];
+    sm.fillHand(s);
+    expect(s.hand).toHaveLength(HAND_CAP); // 上限で停止
+    expect(s.deck).toHaveLength(20 - HAND_CAP); // 引いたぶんだけ山札が減る
+    expect(s.gachaRemaining).toBe(20 - HAND_CAP);
+    expect(s.phase).toBe('playing');
+  });
+
+  it('fillHand：山札が上限未満なら引ける分だけ補充して止まる', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = ['ki', 'ki', 'kuchi']; // 3枚（合体可能な ki+ki を含む＝詰み終了しない）
+    s.hand = [];
+    sm.fillHand(s);
+    expect(s.hand).toHaveLength(3);
+    expect(s.deck).toHaveLength(0);
+    expect(s.gachaRemaining).toBe(0);
+    expect(s.phase).toBe('playing');
   });
 
   it('useHint：deck は無料で合体可能組を返し hintUsed++', () => {

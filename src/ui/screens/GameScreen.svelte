@@ -169,6 +169,9 @@
       field = new ParticleField(ctx, { reducedMotion });
       field.start();
     }
+    // 初期手札を上限まで自動で引く（開始時のみ・手札が空のとき一度だけ）。
+    const s = sessionManager.getSession();
+    if (s && s.hand.length === 0) sessionManager.fillHand(s);
     tick();
     tickTimer = setInterval(tick, 100);
   });
@@ -248,7 +251,7 @@
     view !== null && view.gachaRemaining > 0 && !canPull
   );
   const canCombine = $derived(selectedIds.length >= 2);
-  const canDiscard = $derived(selectedIds.length === 1);
+  const canExchange = $derived(selectedIds.length >= 1);
   const hintDisabled = $derived(!view || !sessionManager.canUseHint(view));
 
   function toggle(instanceId: string): void {
@@ -343,12 +346,13 @@
     hintInfo = null;
   }
 
-  function doDiscard(): void {
+  function doExchange(): void {
     const s = sessionManager.getSession();
-    if (!s || selectedIds.length !== 1) return;
+    if (!s || selectedIds.length < 1) return;
     clearRevealTimer();
     reveal = null;
-    sessionManager.discardAndDraw(s, selectedIds[0]);
+    // 選択カードを一括で交換（選択枚数ぶんを引き直す・手札枚数は不変）。
+    sessionManager.exchangeCards(s, selectedIds);
     selectedIds = [];
     resetHint();
     feedback = '';
@@ -609,7 +613,7 @@
 
     {#if handFull}
       <p class="organize" role="status">
-        手札がいっぱいです。合体や「捨てる」で整理してください。
+        手札がいっぱいです。合体や「交換」で整理してください。
       </p>
     {/if}
 
@@ -650,8 +654,8 @@
       <MaterialButton
         variant="outlined"
         color="secondary"
-        disabled={!canDiscard}
-        onclick={doDiscard}>捨てて引き直す</MaterialButton
+        disabled={!canExchange}
+        onclick={doExchange}>交換</MaterialButton
       >
       <MaterialButton variant="text" color="secondary" onclick={quit}
         >やめる</MaterialButton
