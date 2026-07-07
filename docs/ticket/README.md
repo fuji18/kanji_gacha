@@ -21,6 +21,7 @@
 | 6 | 追加機能 | T-027 |
 | 7 | レベル・学習拡張 | T-028〜T-048 |
 | 8 | プラットフォーム掲載（fujioha_platform スポーク化） | T-049〜T-052 |
+| 9 | 品質・信頼性強化（develop レビュー起点） | T-053〜T-062 |
 
 ## チケット一覧
 
@@ -78,6 +79,16 @@
 | [T-050](./T-050-listing-seo-meta.md) | 掲載向け SEO/OGP/メタ整備 | 8 | P1 | T-049 | — | 🔲 |
 | [T-051](./T-051-platform-registry.md) | プラットフォームレジストリ登録（kanji-gattai） | 8 | P0 | T-049,T-050 | — | 🔲 |
 | [T-052](./T-052-brand-consistency.md) | ブランド一貫性（@fujioha/ui 取り込み） | 8 | P2 | T-049 | — | 🔲 |
+| [T-053](./T-053-legal-privacy-disclaimer.md) | 法務・プライバシー・免責の整備（About 拡充） | 9 | P0 | T-021 | F10 | 🔲 |
+| [T-054](./T-054-a11y-quick-wins.md) | アクセシビリティ即効改善（aria-live・focus-visible・フォーカストラップ） | 9 | P0 | T-017,T-034 | — | 🔲 |
+| [T-055](./T-055-color-contrast-dark-mode.md) | カラーコントラスト是正とダークモード | 9 | P1 | button-UX マージ | — | 🔲 |
+| [T-056](./T-056-effects-settings.md) | 演出量・読み上げ速度の設定（すくなめモード） | 9 | P1 | T-018,T-032 | — | 🔲 |
+| [T-057](./T-057-exchange-undo.md) | 交換の取り消し（Undo） | 9 | P1 | PR #86 | F5 | 🔲 |
+| [T-058](./T-058-tutorial-replay.md) | チュートリアル再表示導線 | 9 | P1 | T-034 | — | 🔲 |
+| [T-059](./T-059-pwa-manifest-icons.md) | PWA マニフェストアイコン整備（192px・maskable） | 9 | P1 | T-024,T-050 | — | 🔲 |
+| [T-060](./T-060-security-ops.md) | セキュリティ運用強化（URL レバー記録対象外化・依存監査） | 9 | P1 | T-002 | — | 🔲 |
+| [T-061](./T-061-hand-sorting.md) | 手札の並べ替え・整理補助 | 9 | P2 | T-017 | — | 🔲 |
+| [T-062](./T-062-small-improvements-backlog.md) | 小粒改善バックログ（整理・記録・運用） | 9 | P3 | — | — | 🔲 |
 
 ## 依存グラフ（概略）
 
@@ -105,6 +116,13 @@ graph TD
   T049 --> T050 & T052
   T049 & T050 --> T051
   T014 --> T025
+  T021 --> T053
+  T017 & T034 --> T054
+  T018 & T032 --> T056
+  T034 --> T058
+  T024 & T050 --> T059
+  T002 --> T060
+  T017 --> T061
 ```
 
 ## 状態の凡例
