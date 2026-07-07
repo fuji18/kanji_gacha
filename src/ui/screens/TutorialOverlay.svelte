@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import StrokeKanji from '../components/StrokeKanji.svelte';
 
   // 初回チュートリアル（T-034）。実ゲーム状態に触れない自己完結のガイド付き1問
@@ -9,6 +10,40 @@
     ondone: () => void;
   }
   let { ondone }: Props = $props();
+
+  // フォーカストラップ（T-054）。表示中は Tab をオーバーレイ内で巡回させ、Esc で閉じる
+  // （スキップ扱い）。背景は App.svelte 側の inert と二重の防御。
+  let backdropEl = $state<HTMLDivElement | null>(null);
+
+  onMount(() => {
+    // 開いた瞬間にオーバーレイ内へフォーカスを移す（キーボード操作の起点）。
+    backdropEl?.querySelector<HTMLElement>('button:not([disabled])')?.focus();
+  });
+
+  function onKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Escape') {
+      ondone(); // Esc はスキップと同じ扱い
+      return;
+    }
+    if (e.key !== 'Tab' || backdropEl === null) return;
+    const focusables = [
+      ...backdropEl.querySelectorAll<HTMLElement>('button:not([disabled])'),
+    ];
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    // 端で折り返す。backdrop 外にフォーカスがある場合も内側へ引き込む。
+    if (e.shiftKey) {
+      if (active === first || !backdropEl.contains(active)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else if (active === last || !backdropEl.contains(active)) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
 
   const reducedMotion =
     typeof matchMedia !== 'undefined' &&
@@ -32,11 +67,14 @@
   }
 </script>
 
+<svelte:window onkeydown={onKeydown} />
+
 <div
   class="tutorial-backdrop"
   role="dialog"
   aria-modal="true"
   aria-label="あそびかた"
+  bind:this={backdropEl}
 >
   <div class="card">
     <button type="button" class="skip" onclick={ondone}>スキップ</button>
