@@ -143,7 +143,7 @@ interface PlayStats {
   combineSuccess: number;   // 合体成功回数
   combineMiss: number;      // ミス回数
   hintUsed: number;         // ヒント利用回数
-  discardUsed: number;      // 捨てる利用回数
+  discardUsed: number;      // 交換利用回数（旧・捨てる。フィールド名は互換のため維持）
   endReason: 'stuck' | 'empty_hand' | null; // 詰み / 手札0（PRD詰み終了率の定義）
   finalScore: number;
   newDiscoveries: number;
@@ -318,7 +318,7 @@ function drawPart(level: Level, pool: Part[], rng: RNG): Part {
 **床の統計的維持**（PRD F3設計原則の実装。「保証」ではなく統計的に詰みを起きにくくする設計）：
 - `Part.weight` を**ビルド時**に算出する。「その部品が、レベルscope内で成立する2部品有名漢字の数」に比例させる
 - やさしいプールでは `木・日・口・言・女・寺` 等の高汎用部品の weight を大きくする → 抽選で支配的になり、`林・明・好・詩…` 級の正解が手札に揃いやすい
-- これは**統計的な予防**であり、能動的な救済（出現率の動的補正）は行わない（PRD：救済はヒント＋捨てるのみ）
+- これは**統計的な予防**であり、能動的な救済（出現率の動的補正）は行わない（PRD：救済はヒント＋交換のみ）
 - **設計目標との関係（問題3）**：詰みは原理的に起こりうる（PRD F6終了条件）。本設計の狙いは詰み率をKPI目標（詰み終了率10〜20%＝80〜90%は詰まずに終わる）に収めること。「床保証」という断言ではなく、weight設計でこの分布に寄せる
 - **検証（問題3）**：weight設計の妥当性は思い込みで決めない。ビルド時にモンテカルロシミュレーション（8.1）で各レベルの詰み率を実測し、目標レンジ（10〜20%）に収まるまで weight を調整する。CIで詰み率を継続監視する
 
@@ -378,7 +378,7 @@ function findCombinable(hand, level, dict, kanji, firstOnly): HandPart[][] {
 
 ```typescript
 function checkGameEnd(s: GameSession, dict, kanji): void {
-  // 各操作（ガチャ/合体/捨てる）の完了後に呼ぶ（PRD F6）
+  // 各操作（ガチャ/合体/交換）の完了後に呼ぶ（PRD F6）
   if (s.hand.length === 0 && s.gachaRemaining === 0) {
     end(s, 'empty_hand'); return;
   }
@@ -471,10 +471,11 @@ class ScoreService {
   onMiss(s: ScoreState): void;
 }
 
-// 救済（ヒント・捨てて引き直す）
+// 救済（ヒント・交換）
 class RescueService {
   useHint(s: GameSession): HandPart[] | null;     // コスト消費＋ヒント探索
-  // 「捨てて引き直す」は (1)手札から1枚削除＋コスト消費 → (2)補充ガチャを1回実行 の2ステップ（問題7）
+  // 「交換」の1枚分は (1)手札から1枚削除＋コスト消費 → (2)補充ガチャを1回実行 の2ステップ（問題7）。
+  // 複数枚の一括交換は SessionManager.exchangeCards が選択枚数ぶん適用する（総コストを事前確認）
   // 補充ガチャは通常のガチャ残は減らさない。レベル別コスト（ガチャ残-0/-1/-2）のみ消費する
   // rng はセッションのRNG（フリー=Math.random系／デイリー=mulberry32）を SessionManager 経由で受け取る（新問題D）
   discardAndDraw(s: GameSession, instanceId: string, rng: RNG): void;
@@ -484,10 +485,12 @@ class RescueService {
 class SessionManager {
   start(level: Level, mode: 'free'|'daily'): GameSession;
   // 事前条件（問題8）：hand.length < HAND_CAP かつ gachaRemaining > 0 のときのみ呼び出し可能。
-  // 手札上限到達時はUIレイヤーがガチャボタンを非活性化し、手札整理（合体/捨てる）を促す（PRD F1）。
+  // 手札上限到達時はUIレイヤーがガチャボタンを非活性化し、手札整理（合体/交換）を促す（PRD F1）。
   // 防御的に、SessionManager側でも上限超過なら no-op で戻る。
   pullGacha(s: GameSession): void;        // ガチャ→手札追加→終了判定
+  fillHand(s: GameSession): void;         // 初期手札の自動補充（上限 or 残数まで pullGacha を反復・7.1）
   combine(s: GameSession, sel: HandPart[]): CombineResult; // 判定→採点 or ミス→終了判定
+  exchangeCards(s: GameSession, instanceIds: string[]): void; // 交換（1枚以上を一括・7.3）
   end(s: GameSession, reason): GameResult;
 }
 
@@ -504,7 +507,7 @@ interface CombineResult {
 | 操作 | やさしい | ふつう | むずかしい |
 |---|---|---|---|
 | ヒント | 無料・常時 | ガチャ残-1 | 利用不可 |
-| 捨てる | 無料 | ガチャ残-1 | ガチャ残-2 |
+| 交換（1枚あたり） | 無料 | ガチャ残-1 | ガチャ残-2 |
 
 > `SessionManager.end` が返す `GameResult` には、最終スコア・作成漢字一覧・新発見・称号を含む。将来のF11（結果シェア・P1）に備え、`GameResult` にシェア用テキストを生成できる情報（レベル・スコア・代表作成漢字）を保持する（問題11）。
 
@@ -560,7 +563,7 @@ stateDiagram-v2
 | 画面 | 主な要素 | 対応PRD |
 |---|---|---|
 | Home | レベル選択・今日のお題・ベストスコア・図鑑/About入口 | F3,F8,F9 |
-| Game | ガチャボタン・手札・合体操作・スコア/コンボ・ガチャ残・ヒント/捨てる | F1,F2,F4,F5 |
+| Game | ガチャボタン・手札・合体操作・スコア/コンボ・ガチャ残・ヒント/交換 | F1,F2,F4,F5 |
 | Result | 最終スコア・作成漢字一覧・新発見・称号・もう一回/シェア/ホーム | F6,F11 |
 | Zukan | 発見漢字一覧・読み/意味・収集率(○/N) ※N=到達可能なprimary漢字総数（8.1で算出） | F7 |
 | About | KANJIDIC2/KRADFILEクレジット・CC BY-SA表記 | F10 |
@@ -570,6 +573,10 @@ stateDiagram-v2
 ## 7. ユースケース（シーケンス図）
 
 ### 7.1 ガチャを回す（F1）
+
+**初期手札の自動補充**：ゲーム画面の表示時（手札が空のとき一度だけ）、`SessionManager.fillHand` が
+手札上限（`HAND_CAP`）または引ける残数まで `pullGacha` を反復し、初期手札を自動で揃える（PRD F1）。
+デイリーの決定性は `pullGacha` の順序引きに従うためシードから再現可能。以降の手動ガチャは下記フロー。
 
 ```mermaid
 sequenceDiagram
@@ -620,7 +627,14 @@ sequenceDiagram
     SM->>SM: checkGameEnd()
 ```
 
-### 7.3 捨てて引き直す（F5）
+### 7.3 交換（F5）
+
+選択した手札 **1枚以上** を一括で引き直す（旧・捨てて引き直す）。交換後の手札枚数は不変。
+モード別の補充方法：
+
+- **達成型（deck）**: 選択枚数を山札へ戻して切り直し、同数を引き直す（部品は場から失われない）。
+- **タイムアタック**: レベル別コスト×枚数を事前に一括確認し、残不足なら no-op（消費もしない）。
+  1枚分は RescueService の 2 ステップ（削除＋コスト消費 → 補充ガチャ）を枚数ぶん適用する。
 
 ```mermaid
 sequenceDiagram
@@ -630,14 +644,20 @@ sequenceDiagram
     participant R as RescueService
     participant G as GachaService
 
-    U->>UI: 部品を選んで「捨てて引き直す」
-    UI->>SM: discardAndDraw(session, instanceId)
-    SM->>R: discardAndDraw(session, instanceId, rng)
-    R->>R: 手札から1枚削除＋コスト消費（レベル別 ガチャ残-0/-1/-2）
-    R->>G: draw(level, rng)（補充。通常のガチャ残は減らさない）
-    G-->>R: Part
-    R->>R: hand に追加
-    R-->>SM: 完了
+    U->>UI: 部品を1枚以上選んで「交換」
+    UI->>SM: exchangeCards(session, instanceIds[])
+    alt 達成型（deck）
+        SM->>SM: 選択を山札へ返却→シャッフル→同数を引き直す
+    else タイムアタック
+        SM->>SM: 総コスト（レベル別×枚数）を事前確認（不足なら no-op）
+        loop 選択した各1枚
+            SM->>R: discardAndDraw(session, instanceId, rng)
+            R->>R: 手札から1枚削除＋コスト消費（レベル別 ガチャ残-0/-1/-2）
+            R->>G: draw(level, rng)（補充。通常のガチャ残は減らさない）
+            G-->>R: Part
+            R->>R: hand に追加
+        end
+    end
     SM->>SM: checkGameEnd()
     SM-->>UI: 更新後セッション
     UI-->>U: 演出
@@ -733,7 +753,7 @@ kg.state.v1   -> PersistedState（JSON文字列）
 
 ### 統合テスト
 - セッション一連：開始→10回ガチャ→合体/ミス→終了判定（詰み/手札0の両経路）
-- 救済：ヒント探索結果が実際に合体可能、捨てるでコストが正しく減る（レベル別）
+- 救済：ヒント探索結果が実際に合体可能、交換でコストが正しく減る（レベル別・一括時は枚数×コスト）
 - 永続化：図鑑追加→リロード→保持、ベスト更新
 
 ### E2Eテスト
