@@ -24,8 +24,9 @@ export default defineConfig({
         // SPA：未キャッシュのナビゲーションは index.html にフォールバック（オフラインでもルート表示）。
         navigateFallback: 'index.html',
       },
-      // Web App Manifest。色は和風ブランド（朱/和紙）に合わせる（T-050）。アイコンは og 生成と
-      // 共通の 512px PNG を流用（apple-touch-icon.png）。maskable 専用アイコンは後続フェーズ。
+      // Web App Manifest。色は和風ブランド（朱/和紙）に合わせる（T-050）。
+      // アイコンは 512/192(any)＋512(maskable) の3枚（T-059）。maskable はセーフゾーン80%に
+      // 中身（金枠＋合）を収めた専用画像で、Android の円形マスクでも見切れない。
       manifest: {
         name: '漢字合体ガチャ',
         short_name: '漢字ガチャ',
@@ -42,6 +43,18 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
+          },
+          {
+            src: 'icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'icon-512-maskable.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },
