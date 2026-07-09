@@ -43,6 +43,12 @@ export interface SessionManagerOptions {
   timeAttackInitialMs?: number;
   /** 達成型（deck）の山札枚数の上限。E2E/テストで短縮するための無害なレバー（既定は無制限）。 */
   deckLimit?: number;
+  /**
+   * 終了時の永続化（ベスト・図鑑・にがて）を行うか（既定 true・T-060）。
+   * `?taMs`/`?deckMax` などゲームバランスを変える URL レバー使用時に false を渡し、
+   * 正規プレイでない条件の記録がベスト等を汚染するのを防ぐ（`?seed` は再現目的のため対象外）。
+   */
+  recordable?: boolean;
   sessionStore?: Writable<GameSession | null>;
   persistedStore?: Writable<PersistedState>;
 }
@@ -92,6 +98,7 @@ export class SessionManager {
   private readonly random: () => number;
   private readonly timeAttackInitialMs: number;
   private readonly deckLimit: number | null;
+  private readonly recordable: boolean;
   private readonly sessionStore: Writable<GameSession | null>;
   private readonly persistedStore: Writable<PersistedState>;
 
@@ -125,6 +132,7 @@ export class SessionManager {
     this.timeAttackInitialMs =
       opts.timeAttackInitialMs ?? TIME_ATTACK.initialMs;
     this.deckLimit = opts.deckLimit ?? null;
+    this.recordable = opts.recordable ?? true;
     this.sessionStore = opts.sessionStore ?? sessionStore;
     this.persistedStore = opts.persistedStore ?? persistedStore;
 
@@ -738,9 +746,10 @@ export class SessionManager {
         : s.mode === 'daily'
           ? (this.persisted.dailyBest[todayYmdJst(this.now())] ?? 0)
           : this.persisted.bestScores[s.level];
-    const isNewBest = s.score.score > prevBest;
+    // 記録対象外セッション（URL レバー使用・T-060）は永続化せず、新記録扱いもしない。
+    const isNewBest = this.recordable && s.score.score > prevBest;
 
-    this.persistResults(s);
+    if (this.recordable) this.persistResults(s);
 
     // 達成型（deck）の収集実績：作った異なり漢字数 / 出題数 N（N で頭打ち表示）。
     const completedCount =

@@ -25,18 +25,25 @@ function sessionOptionsFromUrl(): SessionManagerOptions {
     if (Number.isFinite(seed)) opts.random = mulberry32(seed);
   }
 
-  // `?taMs=<整数>` でタイムアタックの初期持ち時間を上書きする（E2E 短縮用の無害なレバー・T-027）。
+  // `?taMs=<整数>` でタイムアタックの初期持ち時間を上書きする（E2E 短縮用レバー・T-027）。
   const rawTaMs = params.get('taMs');
   if (rawTaMs !== null) {
     const taMs = Number(rawTaMs);
     if (Number.isFinite(taMs) && taMs > 0) opts.timeAttackInitialMs = taMs;
   }
 
-  // `?deckMax=<整数>` で達成型（deck）の山札枚数を上限する（E2E 短縮用の無害なレバー）。
+  // `?deckMax=<整数>` で達成型（deck）の山札枚数を上限する（E2E 短縮用レバー）。
   const rawDeckMax = params.get('deckMax');
   if (rawDeckMax !== null) {
     const deckMax = Number(rawDeckMax);
     if (Number.isFinite(deckMax) && deckMax > 0) opts.deckLimit = deckMax;
+  }
+
+  // ゲームバランスを変えるレバー（taMs/deckMax）使用時は記録対象外とする（T-060）。
+  // 短時間セッションや極小山札でベスト・図鑑・にがてを汚染できてしまうため。
+  // `?seed` は乱数の再現（デイリーと同思想）でバランス不変のため記録対象のまま。
+  if (opts.timeAttackInitialMs !== undefined || opts.deckLimit !== undefined) {
+    opts.recordable = false;
   }
 
   return opts;
