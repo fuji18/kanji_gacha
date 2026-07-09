@@ -12,8 +12,11 @@ import {
 import { mulberry32 } from './domain/rng/mulberry32';
 
 /**
- * `?seed=<整数>` が付いていればフリープレイの乱数を決定化する（再現・E2E 用の無害なレバー）。
- * デイリーは元から日付シードで決定的なため対象外。
+ * URL クエリの E2E/再現用レバーを SessionManagerOptions に変換する（T-060 で記録可否を判定）。
+ *  - `?seed=<整数>`   … フリープレイの乱数を決定化（バランス不変・記録対象のまま）
+ *  - `?taMs=<整数>`   … タイムアタック初期持ち時間の短縮（バランス変更 → 記録対象外）
+ *  - `?deckMax=<整数>`… 達成型の山札上限（バランス変更 → 記録対象外）
+ * デイリーは元から日付シードで決定的なため seed の対象外。
  */
 function sessionOptionsFromUrl(): SessionManagerOptions {
   const params = new URLSearchParams(location.search);
