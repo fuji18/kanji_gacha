@@ -7,7 +7,7 @@ public/data/ の生成物（kanji.json / parts.json / combine-dict.json）は、
 (CC BY-SA 4.0) https://creativecommons.org/licenses/by-sa/4.0/ で提供します。
 
 元データ・クレジット:
-  - KANJIDIC2 / KRADFILE  (c) Electronic Dictionary Research and Development
+  - KANJIDIC2  (c) Electronic Dictionary Research and Development
     Group (EDRDG) — CC BY-SA 4.0 — https://www.edrdg.org/
     （漢字の読み・意味・画数・学年・頻度）
   - KanjiVG  (c) Ulrich Apel and contributors — CC BY-SA 3.0 —
