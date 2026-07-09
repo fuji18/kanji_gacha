@@ -271,6 +271,23 @@ export class SessionManager {
     this.persistedStore.set(this.persisted);
   }
 
+  /** 演出すくなめ設定を切り替えて永続化する（T-056）。`persistedStore` を更新する。 */
+  setReducedEffects(on: boolean): void {
+    this.storage.saveSettings({
+      ...this.persisted.settings,
+      reducedEffects: on,
+    });
+    this.persisted = this.storage.loadState();
+    this.persistedStore.set(this.persisted);
+  }
+
+  /** よみあげ速度（ゆっくり）設定を切り替えて永続化する（T-056）。`persistedStore` を更新する。 */
+  setSlowTts(on: boolean): void {
+    this.storage.saveSettings({ ...this.persisted.settings, slowTts: on });
+    this.persisted = this.storage.loadState();
+    this.persistedStore.set(this.persisted);
+  }
+
   /**
    * 「今日のお題」の対象レベルと日付キー（機能設計4.6・F8・T-022）。`now`（注入時刻）から JST 日付を求め、
    * 日替わり固定のレベルを決める。Home が表示（レベル併記・デイリーベスト）と `start(level,'daily')` に使う。

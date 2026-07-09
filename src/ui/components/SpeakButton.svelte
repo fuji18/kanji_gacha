@@ -13,6 +13,8 @@
   let { text, label = '読み上げ' }: Props = $props();
 
   const show = $derived($persistedStore.settings.tts && canSpeak());
+  // よみあげ速度（T-056）：「ゆっくり」設定で 0.85 倍速（低学年配慮）。
+  const rate = $derived($persistedStore.settings.slowTts ? 0.85 : 1);
 </script>
 
 {#if show}
@@ -20,7 +22,7 @@
     type="button"
     class="speak"
     aria-label={label}
-    onclick={() => speak(text)}>🔊</button
+    onclick={() => speak(text, 'ja-JP', rate)}>🔊</button
   >
 {/if}
 

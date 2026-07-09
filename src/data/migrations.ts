@@ -33,6 +33,8 @@ export function defaultState(): PersistedState {
       tutorialDone: false,
       largeText: false,
       tts: true, // 読み上げは既定で有効（T-032）
+      reducedEffects: false, // 演出は既定でふつう（T-056）
+      slowTts: false, // よみあげ速度は既定でふつう（T-056）
     },
     schemaVersion: CURRENT_SCHEMA_VERSION,
   };
@@ -141,6 +143,12 @@ function normalizeSettings(raw: unknown, fallback: Settings): Settings {
     largeText:
       typeof raw.largeText === 'boolean' ? raw.largeText : fallback.largeText,
     tts: typeof raw.tts === 'boolean' ? raw.tts : fallback.tts,
+    // T-056：旧データ（フィールド無し）は既定 false で補完（後方互換・版上げ不要）。
+    reducedEffects:
+      typeof raw.reducedEffects === 'boolean'
+        ? raw.reducedEffects
+        : fallback.reducedEffects,
+    slowTts: typeof raw.slowTts === 'boolean' ? raw.slowTts : fallback.slowTts,
   };
 }
 
