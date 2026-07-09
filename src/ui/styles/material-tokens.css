@@ -122,8 +122,8 @@
 /* ===== ダークテーマ（OS 追随・T-055） =====
    トークンの上書きのみで全画面をダーク化する（各画面はトークン参照のみの規約）。
    夜の和紙（暗い生成り地×明るい墨）に、朱・藍・金を暗地で可読な明度へ調整。
-   主要ペアのコントラストは AA（本文 4.5:1）以上を確認済み：
-   on-surface 12.7:1 / secondary 7.4:1 / primary 5.0:1 / tertiary(金) 6.5:1。 */
+   主要ペアのコントラストは AA（本文 4.5:1）以上を実測確認済み：
+   on-surface 12.8:1 / secondary 7.4:1 / primary 5.0:1 / tertiary(金) 7.5:1。 */
 @media (prefers-color-scheme: dark) {
   :root {
     --md-sys-color-primary: #e66a58; /* 朱（明・テキスト可読） */

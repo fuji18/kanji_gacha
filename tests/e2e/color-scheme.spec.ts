@@ -4,6 +4,8 @@ import { test, expect } from '@playwright/test';
 //  - OS ダーク設定（colorScheme エミュレーション）でトークンが夜の和紙へ切り替わる
 //  - ライトでは従来の和紙のまま（回帰）
 //  - theme-color メタがライト/ダークの2枚構成
+// forced-colors（Windows ハイコントラスト）は Playwright のエミュレーション制約により
+// 自動化せず、PartChip の outline 追加（コード）＋手動確認で担保する。
 
 test.describe('ダークモード（prefers-color-scheme: dark）', () => {
   test.use({ colorScheme: 'dark' });
