@@ -27,12 +27,13 @@
   });
 </script>
 
-<header class="app-header">
+<!-- チュートリアル表示中は背景を inert 化し、Tab がオーバーレイの外へ抜けないようにする（T-054） -->
+<header class="app-header" inert={showTutorial}>
   <span class="brand-kicker">KANJI&nbsp;FUSION&nbsp;GACHA</span>
   <h1>漢字合体ガチャ</h1>
 </header>
 
-<main id="main">
+<main id="main" inert={showTutorial}>
   {#if $routeStore === 'home'}
     <HomeScreen {sessionManager} />
   {:else if $routeStore === 'game'}
@@ -54,6 +55,14 @@
 {/if}
 
 <style>
+  /* キーボード操作の現在位置を全要素で可視化する（T-054 / WCAG 2.4.7）。
+     藍のリングで統一。コンポーネント個別の focus-visible はより具体的なセレクタとして共存する。
+     マウス/タップでは表示されない（focus-visible 準拠）。 */
+  :global(:focus-visible) {
+    outline: 3px solid var(--md-sys-color-secondary);
+    outline-offset: 2px;
+  }
+
   /* ページ全体の地：墨地に金/藍のほのかな放射光（handoff design の余白配色）。
      和紙の各画面（.screen）はこの暗地の上に浮くカードとして見せる。 */
   :global(body) {
