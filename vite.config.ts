@@ -8,6 +8,11 @@ export default defineConfig({
   // fujioha_platform のスポーク（kanji-gattai.fujioha.com）として Cloudflare Pages の
   // ルート `/` に配信する（T-049）。サブパス前提を成果物に埋め込まないため base は常に '/' 固定。
   base: '/',
+  // アプリバージョン（About 画面の表示・T-053）。npm 経由の実行では npm_package_version が
+  // package.json の version を持つ。直接 vite 実行時のフォールバックは '0.0.0'。
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.0.0'),
+  },
   plugins: [
     svelte(),
     VitePWA({

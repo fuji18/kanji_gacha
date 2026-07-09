@@ -58,14 +58,17 @@ export default tseslint.config(
     languageOptions: {
       parser: svelteParser,
       parserOptions: { parser: tseslint.parser },
-      globals: { ...globals.browser },
+      // __APP_VERSION__ は vite define で注入するビルド時定数（T-053）。
+      globals: { ...globals.browser, __APP_VERSION__: 'readonly' },
     },
   },
   {
     // ブラウザで動く実行時 TS（UI/アプリ/データ層・エントリ）はブラウザ globals を解決する
     // （location/document/localStorage/fetch 等）。Node 専用の scripts/ には付与しない。
     files: ['src/**/*.ts'],
-    languageOptions: { globals: { ...globals.browser } },
+    languageOptions: {
+      globals: { ...globals.browser, __APP_VERSION__: 'readonly' },
+    },
   },
   // --- レイヤー別 import 境界（repository-structure 5.1） ---
   {
