@@ -2,6 +2,7 @@
   import type { SessionManager } from './app/SessionManager';
   import { routeStore } from './app/stores/routeStore';
   import { persistedStore } from './app/stores/persistedStore';
+  import { tutorialRequestStore } from './app/stores/tutorialStore';
   import HomeScreen from './ui/screens/HomeScreen.svelte';
   import GameScreen from './ui/screens/GameScreen.svelte';
   import ResultScreen from './ui/screens/ResultScreen.svelte';
@@ -13,10 +14,17 @@
   // SessionManager は必要な画面へ prop で渡す（T-016: Home。Game/Result は各担当チケットで追加）。
   let { sessionManager }: { sessionManager: SessionManager } = $props();
 
-  // 初回チュートリアル（T-034）。未完了なら起動時にガイドを表示し、完了/スキップで永続化する。
-  const showTutorial = $derived(!$persistedStore.settings.tutorialDone);
+  // 初回チュートリアル（T-034）＋手動再表示（T-058）。
+  // 初回（tutorialDone 未完了）または Home からのリクエストで表示する。
+  const showTutorial = $derived(
+    !$persistedStore.settings.tutorialDone || $tutorialRequestStore
+  );
   function finishTutorial(): void {
-    sessionManager.setTutorialDone(true);
+    tutorialRequestStore.set(false);
+    // 手動再表示の完了では初回フラグを触らない（T-058：一時表示と初回体験の分離）。
+    if (!$persistedStore.settings.tutorialDone) {
+      sessionManager.setTutorialDone(true);
+    }
   }
 
   // 文字サイズ拡大（T-037）。ルート（html）の基準サイズを拡大し、rem ベースの UI 全体を一律に拡大する。
