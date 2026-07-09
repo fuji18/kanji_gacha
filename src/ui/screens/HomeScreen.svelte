@@ -2,6 +2,7 @@
   import type { SessionManager } from '../../app/SessionManager';
   import { navigate } from '../../app/stores/routeStore';
   import { persistedStore } from '../../app/stores/persistedStore';
+  import { tutorialRequestStore } from '../../app/stores/tutorialStore';
   import Furigana from '../components/Furigana.svelte';
   import MaterialButton from '../components/MaterialButton.svelte';
   import Petals from '../components/Petals.svelte';
@@ -247,6 +248,12 @@
         variant="text"
         color="secondary"
         onclick={() => navigate('about')}>About</MaterialButton
+      >
+      <MaterialButton
+        variant="text"
+        color="secondary"
+        onclick={() => tutorialRequestStore.set(true)}
+        ><Furigana text="遊び方" reading="あそびかた" /></MaterialButton
       >
       <button
         type="button"
