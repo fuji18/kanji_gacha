@@ -26,9 +26,12 @@
   --md-sys-color-secondary-container: #dde3f3;
   --md-sys-color-on-secondary-container: #0e1a3a;
 
-  --md-sys-color-tertiary: #b8860b; /* 金（濃いめ・テキスト可読） */
+  /* 金（テキスト用・T-055）：和紙 #f5f1e6 上で 4.7:1（AA 準拠）。
+     旧 #b8860b は 2.9:1 で不適合だったため暗化した。装飾（罫線・グロウ・落款）には
+     --md-sys-color-tertiary-bright / --kg-color-gold-deep を使うこと。 */
+  --md-sys-color-tertiary: #8a6508;
   --md-sys-color-tertiary-bright: #d4af37; /* 金（装飾用） */
-  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-on-tertiary: #ffffff; /* #8a6508 上で 5.3:1（AA） */
   --md-sys-color-tertiary-container: #f6eccf;
   --md-sys-color-on-tertiary-container: #4a3a05;
 
@@ -114,4 +117,45 @@
   --md-sys-typescale-title-size: var(--md-sys-typescale-title-large);
   --md-sys-typescale-body-size: var(--md-sys-typescale-body-medium);
   --md-sys-typescale-label-size: var(--md-sys-typescale-label-medium);
+}
+
+/* ===== ダークテーマ（OS 追随・T-055） =====
+   トークンの上書きのみで全画面をダーク化する（各画面はトークン参照のみの規約）。
+   夜の和紙（暗い生成り地×明るい墨）に、朱・藍・金を暗地で可読な明度へ調整。
+   主要ペアのコントラストは AA（本文 4.5:1）以上を確認済み：
+   on-surface 12.7:1 / secondary 7.4:1 / primary 5.0:1 / tertiary(金) 6.5:1。 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary: #e66a58; /* 朱（明・テキスト可読） */
+    --md-sys-color-on-primary: #3a0d07;
+    --md-sys-color-primary-container: #5a170e;
+    --md-sys-color-on-primary-container: #f6dedb;
+
+    --md-sys-color-secondary: #9fb0e0; /* 藍（明） */
+    --md-sys-color-on-secondary: #0e1a3a;
+    --md-sys-color-secondary-container: #24304f;
+    --md-sys-color-on-secondary-container: #dde3f3;
+
+    --md-sys-color-tertiary: #d4af37; /* 金：暗地では明るい金がテキスト可読 */
+    --md-sys-color-on-tertiary: #241a08;
+    --md-sys-color-tertiary-container: #4a3a05;
+    --md-sys-color-on-tertiary-container: #f6eccf;
+
+    --md-sys-color-surface: #26221b; /* 夜の和紙 */
+    --md-sys-color-on-surface: #ece7d8;
+    --md-sys-color-surface-container-low: #2c2820;
+    --md-sys-color-surface-container: #332e25;
+    --md-sys-color-surface-container-high: #3a352a;
+    --md-sys-color-on-surface-variant: #b5ac95;
+
+    --md-sys-color-outline: #8a8268;
+    --md-sys-color-outline-variant: #4a4436;
+    --md-sys-color-error: #f2b8b5;
+
+    /* 下部アクションバーも夜の和紙に追随させる。 */
+    --kg-surface-bar: rgba(38, 34, 27, 0.92);
+    /* 浮遊要素の影は暗地では黒を深めに。 */
+    --kg-elevation-float:
+      0 16px 34px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
 }
