@@ -189,6 +189,7 @@
     if (shakeTimer !== null) clearTimeout(shakeTimer);
     if (tickTimer !== null) clearInterval(tickTimer);
     if (popTimer !== null) clearTimeout(popTimer);
+    if (undoTimer !== null) clearTimeout(undoTimer);
     clearRevealTimer();
   });
 
@@ -273,6 +274,7 @@
   function doGacha(): void {
     const s = sessionManager.getSession();
     if (!s) return;
+    hideUndo();
     const before = new Set(s.hand.map((h) => h.instanceId));
     sessionManager.pullGacha(s);
     selectedIds = [];
@@ -296,6 +298,7 @@
   function doCombine(): void {
     const s = sessionManager.getSession();
     if (!s || selectedIds.length < 2) return;
+    hideUndo();
     clearRevealTimer();
     reveal = null;
     const sel = s.hand.filter((h) => selectedIds.includes(h.instanceId));
@@ -320,6 +323,7 @@
   function doHint(): void {
     const s = sessionManager.getSession();
     if (!s) return;
+    hideUndo();
 
     if (hintStage === 0 || hintInfo === null) {
       const hint = sessionManager.useHint(s);
@@ -356,17 +360,51 @@
     hintInfo = null;
   }
 
+  // 交換の Undo スナックバー（T-057）。直前の交換1回だけ、約5秒 or 次の操作まで表示。
+  let undoVisible = $state(false);
+  let undoCount = $state(0);
+  let undoTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function hideUndo(): void {
+    undoVisible = false;
+    if (undoTimer !== null) {
+      clearTimeout(undoTimer);
+      undoTimer = null;
+    }
+  }
+
   function doExchange(): void {
     const s = sessionManager.getSession();
     if (!s || selectedIds.length < 1) return;
     clearRevealTimer();
     reveal = null;
+    const count = selectedIds.length;
     // 選択カードを一括で交換（選択枚数ぶんを引き直す・手札枚数は不変）。
     sessionManager.exchangeCards(s, selectedIds);
     selectedIds = [];
     resetHint();
     feedback = '';
     floatInfo = null;
+    // 実行できた場合のみ Undo を提示（残不足 no-op ではスナップショットが無い）。
+    hideUndo();
+    if (sessionManager.canUndoExchange(s)) {
+      undoCount = count;
+      undoVisible = true;
+      undoTimer = setTimeout(() => {
+        undoVisible = false;
+        undoTimer = null;
+      }, 5_000);
+    }
+  }
+
+  function doUndoExchange(): void {
+    const s = sessionManager.getSession();
+    if (!s) return;
+    sessionManager.undoExchange(s);
+    hideUndo();
+    selectedIds = [];
+    resetHint();
+    feedback = 'もとにもどした';
   }
 
   function quit(): void {
@@ -688,6 +726,16 @@
         <span class="combine-sub">{canCombine ? 'できる！' : '2枚えらぶ'}</span>
       </button>
     </div>
+
+    {#if undoVisible}
+      <!-- 交換の取り消し（T-057）。約5秒 or 次の操作で消える。 -->
+      <div class="undo-bar" role="status">
+        <span class="undo-msg">{undoCount}枚こうかんした</span>
+        <button type="button" class="undo-btn" onclick={doUndoExchange}
+          >もとにもどす</button
+        >
+      </div>
+    {/if}
 
     <nav class="actions">
       <MaterialButton
@@ -1358,5 +1406,33 @@
     .ta-vignette {
       animation: none;
     }
+  }
+
+  /* 交換の Undo スナックバー（T-057）。アクション行の直上に浮かせる。 */
+  .undo-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 6.5rem;
+    transform: translateX(-50%);
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.5rem 0.9rem;
+    background: var(--md-sys-color-on-surface);
+    color: var(--md-sys-color-surface);
+    border-radius: var(--md-sys-shape-corner-full);
+    box-shadow: var(--md-sys-elevation-3);
+    font-size: var(--md-sys-typescale-body-size);
+  }
+  .undo-btn {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--md-sys-typescale-body-size);
+    font-weight: 700;
+    color: var(--md-sys-color-tertiary-bright);
+    padding: 0.2rem 0.4rem;
   }
 </style>
