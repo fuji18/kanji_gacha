@@ -535,6 +535,34 @@ describe('SessionManager end / 収集率・新記録（deck）', () => {
   });
 });
 
+describe('SessionManager recordable=false（記録対象外・T-060）', () => {
+  it('end() でベスト・図鑑・にがてを永続化せず、isNewBest=false', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    const { sm } = makeSM(storage, { recordable: false });
+    const s = sm.start('elementary', 'free'); // 対象 [林,好,品,杏]
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林 完成（スコア>0）
+    const r = sm.end(s, 'deck_empty');
+
+    expect(r.score).toBeGreaterThan(0);
+    expect(r.isNewBest).toBe(false); // 記録対象外は新記録扱いしない
+    const persisted = storage.loadState();
+    expect(persisted.bestScores.elementary).toBe(0); // ベスト不変
+    expect(persisted.zukan.discovered).toEqual({}); // 図鑑不変
+    expect(persisted.weakKanji).toEqual({}); // にがて不変（未完成対象があっても登録しない）
+  });
+
+  it('既定（recordable 未指定）は従来どおり永続化する', () => {
+    const storage = new StorageRepository(new MemoryStorage());
+    const { sm } = makeSM(storage);
+    const s = sm.start('elementary', 'free');
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]);
+    sm.end(s, 'deck_empty');
+    expect(storage.loadState().bestScores.elementary).toBeGreaterThan(0);
+  });
+});
+
 describe('SessionManager にがて漢字・復習モード（T-035）', () => {
   it('達成型終了：未完成の対象字を にがて 登録し、完成字は登録しない', () => {
     const storage = new StorageRepository(new MemoryStorage());
