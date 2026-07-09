@@ -29,6 +29,8 @@ describe('defaultState', () => {
       tutorialDone: false,
       largeText: false,
       tts: true,
+      reducedEffects: false, // T-056
+      slowTts: false, // T-056
     });
   });
 
@@ -110,7 +112,21 @@ describe('migrate 欠損補完・型防御', () => {
       tutorialDone: false,
       largeText: false,
       tts: true,
+      reducedEffects: false, // T-056
+      slowTts: false, // T-056
     });
+  });
+
+  it('T-056 設定（reducedEffects/slowTts）は旧データで既定 false 補完・保存値は保持', () => {
+    const m1 = migrate({ schemaVersion: 1, settings: {} });
+    expect(m1.settings.reducedEffects).toBe(false);
+    expect(m1.settings.slowTts).toBe(false);
+    const m2 = migrate({
+      schemaVersion: 1,
+      settings: { reducedEffects: true, slowTts: true },
+    });
+    expect(m2.settings.reducedEffects).toBe(true);
+    expect(m2.settings.slowTts).toBe(true);
   });
 
   it('settings がオブジェクトでも hintAlwaysOn が非boolなら既定に置換', () => {

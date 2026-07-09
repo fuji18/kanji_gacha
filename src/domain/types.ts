@@ -170,6 +170,8 @@ export interface Settings {
   tutorialDone: boolean; // 初回チュートリアルを完了/スキップ済みか（T-034）
   largeText: boolean; // 文字サイズ拡大（アクセシビリティ・T-037）
   tts: boolean; // 読み上げ（音声）を有効にする（T-032）
+  reducedEffects: boolean; // 演出すくなめ（リビール短縮・装飾削減・T-056）
+  slowTts: boolean; // よみあげ を ゆっくり にする（低学年配慮・T-056）
 }
 
 /** localStorage に永続化する全体状態 */

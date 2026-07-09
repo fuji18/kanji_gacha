@@ -159,6 +159,8 @@ function emptyState(): PersistedState {
       tutorialDone: false,
       largeText: false,
       tts: true,
+      reducedEffects: false,
+      slowTts: false,
     },
     schemaVersion: 1,
   };

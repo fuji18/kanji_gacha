@@ -63,6 +63,12 @@
   function toggleTts(): void {
     sessionManager.setTts(!settings.tts);
   }
+  function toggleReducedEffects(): void {
+    sessionManager.setReducedEffects(!settings.reducedEffects);
+  }
+  function toggleSlowTts(): void {
+    sessionManager.setSlowTts(!settings.slowTts);
+  }
 
   // ---- ずかん収集率（達成型）。作った異なり漢字数 / 出題数 N。 ----
   const collected = $derived(new Set(view?.createdKanji ?? []).size);
@@ -75,10 +81,13 @@
   const reducedMotion =
     typeof matchMedia !== 'undefined' &&
     matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // 演出の実効値（T-056）：OS の reduced-motion を最優先に、アプリ設定「すくなめ」を OR する。
+  // OS 設定は常に尊重（アプリ設定で後退させない）。トグル変更に即時追随する。
+  const effectiveReduced = $derived(reducedMotion || settings.reducedEffects);
 
-  // ---- 舞い散る装飾（CSS パーティクル。桜びら＋金の粒。reduced-motion では出さない・handoff design）----
-  const ambient: string[] = (() => {
-    if (reducedMotion) return [];
+  // ---- 舞い散る装飾（CSS パーティクル。桜びら＋金の粒。演出すくなめ/reduced-motion では出さない）----
+  const ambient: string[] = $derived.by(() => {
+    if (effectiveReduced) return [];
     const out: string[] = [];
     for (let i = 0; i < 12; i++) {
       const gold = i % 3 === 0;
@@ -98,7 +107,7 @@
       }
     }
     return out;
-  })();
+  });
 
   let canvasEl = $state<HTMLCanvasElement | null>(null);
   let fxWidth = $state(0);
@@ -159,7 +168,7 @@
         reveal = null;
         revealTimer = null;
       },
-      reducedMotion ? 0 : 600
+      effectiveReduced ? 0 : 600
     );
   }
 
@@ -200,7 +209,8 @@
     },
     gained: number
   ): void {
-    if (fxWidth > 0 && fxHeight > 0) field?.burst(fxWidth / 2, fxHeight / 2);
+    if (!effectiveReduced && fxWidth > 0 && fxHeight > 0)
+      field?.burst(fxWidth / 2, fxHeight / 2);
     floatSeq += 1;
     floatInfo = {
       char: awarded.char,
@@ -369,6 +379,11 @@
 </script>
 
 <section class="screen game" class:ta={isTimeAttack} class:kg-shake={shaking}>
+  {#if isTimeAttack && timeUrgent && !effectiveReduced}
+    <!-- 終盤警告のビネット（T-056）：TimeBar 以外の「見なくても分かる」チャンネル。
+         装飾のみ（aria-hidden・pointer-events なし）。演出すくなめ/reduced-motion では出さない。 -->
+    <div class="ta-vignette" aria-hidden="true"></div>
+  {/if}
   <h2 class="sr-only">ゲーム</h2>
 
   {#if view === null}
@@ -497,6 +512,30 @@
                 class="tog-cap">{settings.tts ? '音 ON' : '消音'}</span
               >
             </button>
+            <button
+              type="button"
+              class="tog"
+              class:on={settings.reducedEffects}
+              aria-pressed={settings.reducedEffects}
+              aria-label={`えんしゅつ：${settings.reducedEffects ? 'すくなめ' : 'ふつう'}`}
+              onclick={toggleReducedEffects}
+            >
+              <span class="tog-glyph">✨</span><span class="tog-cap"
+                >{settings.reducedEffects ? '演出 少' : '演出'}</span
+              >
+            </button>
+            <button
+              type="button"
+              class="tog"
+              class:on={settings.slowTts}
+              aria-pressed={settings.slowTts}
+              aria-label={`よみあげ：${settings.slowTts ? 'ゆっくり' : 'ふつう'}`}
+              onclick={toggleSlowTts}
+            >
+              <span class="tog-glyph">🐢</span><span class="tog-cap"
+                >ゆっくり</span
+              >
+            </button>
           </div>
         </div>
         <div class="hud-bottom">
@@ -595,7 +634,7 @@
             char={reveal.char}
             rarity={reveal.rarity}
             rarityLabel={reveal.rarityLabel}
-            {reducedMotion}
+            reducedMotion={effectiveReduced}
             oncomplete={onRevealComplete}
           />
         {/key}
@@ -1293,6 +1332,31 @@
     .combine-btn {
       animation: none;
       transition: none;
+    }
+  }
+
+  /* タイムアタック終盤（残5秒）の周縁ビネット（T-056）。朱がゆっくり脈動する。 */
+  .ta-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    border-radius: inherit;
+    box-shadow: inset 0 0 2.2rem 0.4rem rgba(192, 57, 43, 0.55);
+    animation: kg-ta-vignette 1s ease-in-out infinite;
+  }
+  @keyframes kg-ta-vignette {
+    0%,
+    100% {
+      opacity: 0.45;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ta-vignette {
+      animation: none;
     }
   }
 </style>
