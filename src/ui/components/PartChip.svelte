@@ -137,4 +137,16 @@
       transition: none;
     }
   }
+  /* 強制カラーモード（Windows ハイコントラスト等・T-055）：選択・ヒント状態は
+     背景色が無効化されるため、システム色の outline で判別を保証する。 */
+  @media (forced-colors: active) {
+    .chip.selected {
+      outline: 3px solid Highlight;
+      outline-offset: 2px;
+    }
+    .chip.hinted {
+      outline: 3px dashed Highlight;
+      outline-offset: 2px;
+    }
+  }
 </style>

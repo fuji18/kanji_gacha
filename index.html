@@ -10,7 +10,17 @@
       content="漢字のパーツを集めて合体させ、新しい漢字を作る無料の学習ガチャ。小学生の学年別から大人の常用漢字、時間制限のタイムアタックまで。インストール不要・オフライン対応。"
     />
     <link rel="canonical" href="https://kanji-gattai.fujioha.com/" />
-    <meta name="theme-color" content="#c0392b" />
+    <!-- ライト/ダークで PWA のブラウザ UI 色を追随させる（T-055）。 -->
+    <meta
+      name="theme-color"
+      content="#c0392b"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#26221b"
+      media="(prefers-color-scheme: dark)"
+    />
 
     <!-- アイコン -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
