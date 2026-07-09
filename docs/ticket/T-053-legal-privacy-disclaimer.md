@@ -43,3 +43,13 @@ About（または独立セクション）で、プライバシー・免責・ラ
 
 ## 完了の定義 (DoD)
 - [ ] 受け入れ条件を満たし、全品質ゲート成功
+
+## 判断記録（2026-07-09 実装時）
+
+- **KRADFILE 逐語クレジットの扱い**: `data-sources/README.md` と `scripts/build-data/generate.ts`
+  のとおり、実使用データは KANJIDIC2（漢字情報）＋ KanjiVG（部品分解・KRADFILE の代替）であり
+  KRADFILE は未使用。よって About 画面・生成 LICENSE.txt（`licenseText()`）の逐語クレジットから
+  「/ KRADFILE」を除外し、KANJIDIC2 単独＋KanjiVG 併記とした。EDRDG ライセンス（CC BY-SA 4.0）の
+  継承表記・リンクは維持（過剰クレジットの解消であり、帰属の削除ではない）。
+- **バージョン表示**: `process.env.npm_package_version` を vite `define` で注入
+  （JSON import 方式は tsconfig への影響があるため不採用）。
