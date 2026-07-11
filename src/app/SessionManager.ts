@@ -118,6 +118,13 @@ export class SessionManager {
   // deck（達成型）の対象漢字集合。収集率（completedCount）算出に使う。timeAttack では空。
   private deckTargets = new Set<string>();
   private persisted: PersistedState;
+  // 直前の交換のスナップショット（Undo 用・T-057）。次の操作で無効化する。
+  private exchangeSnapshot: {
+    hand: HandPart[];
+    deck: string[];
+    gachaRemaining: number;
+    discardUsed: number;
+  } | null = null;
   private baselineDiscovered = new Set<string>();
   private altChars: string[] = [];
   private startedAtMs = 0;
@@ -356,6 +363,7 @@ export class SessionManager {
     this.altChars = [];
     this.startedAtMs = this.now();
     this.result = null;
+    this.exchangeSnapshot = null; // セッション跨ぎの Undo を防止（T-057）
 
     let deck: string[] = [];
     let targetTotal = 0;
@@ -462,6 +470,7 @@ export class SessionManager {
    */
   pullGacha(s: GameSession): void {
     if (s.phase !== 'playing') return;
+    this.exchangeSnapshot = null; // 次の操作で Undo は無効（T-057）
     // 手札上限は両モード共通の防御。
     if (s.hand.length >= HAND_CAP) {
       this.publish();
@@ -508,6 +517,8 @@ export class SessionManager {
 
     const resolved = this.combineService.resolve(sel, s.level);
     if (resolved === null) {
+      // ミスは状態変化（コンボリセット・KPI）を伴う操作なので Undo を無効化する（T-057）。
+      this.exchangeSnapshot = null;
       this.score.onMiss(s.score);
       s.stats.combineMiss += 1;
       // タイムアタック：ミスは持ち時間を減算（コンボリセットは onMiss 済み・T-027）。
@@ -533,6 +544,10 @@ export class SessionManager {
         duplicate: true,
       };
     }
+
+    // 成立＝状態が変わる操作。ここで初めて Undo を無効化する
+    // （duplicate の無効 no-op では直前の有効な Undo を温存する・T-057）。
+    this.exchangeSnapshot = null;
 
     // 成立：選択部品を手札から除去
     const ids = new Set(sel.map((h) => h.instanceId));
@@ -612,6 +627,9 @@ export class SessionManager {
     }
 
     if (s.gameMode === 'deck') {
+      // Undo 用スナップショット（T-057）。**実行が成立する直前**でのみ保存する。
+      // 成立しない no-op で保存/無効化すると、直前の有効な Undo を理由なく失う。
+      this.exchangeSnapshot = this.takeExchangeSnapshot(s);
       // 達成型（T-029）：選択枚数を**山札に戻し**、切り直して同数を引き直す。
       // 部品を場から失わないため、N字すべてを完成できる状態が保たれる。
       s.hand = s.hand.filter((h) => !idSet.has(h.instanceId));
@@ -631,12 +649,17 @@ export class SessionManager {
 
     // タイムアタック：従来の救済（補充プール抽選＋レベル別コスト）を枚数ぶん適用。
     // 「実行できないときは消費もしない」を徹底：総コストを先に確認し、不足なら no-op。
-    if (this.rescue === null) return;
+    // no-op では exchangeSnapshot に触れない（直前の有効な Undo を温存する）。
+    if (this.rescue === null) {
+      this.publish();
+      return;
+    }
     const totalCost = DISCARD_COST[s.level] * targets.length;
     if (s.gachaRemaining < totalCost) {
       this.publish();
       return;
     }
+    this.exchangeSnapshot = this.takeExchangeSnapshot(s); // 成立確定後に保存
     for (const t of targets) {
       this.rescue.discardAndDraw(s, t.instanceId, this.rng);
     }
@@ -654,12 +677,51 @@ export class SessionManager {
     this.exchangeCards(s, [instanceId]);
   }
 
+  /** 交換前状態のスナップショットを作る（Undo・T-057）。成立が確定した直前でのみ呼ぶ。 */
+  private takeExchangeSnapshot(s: GameSession): {
+    hand: HandPart[];
+    deck: string[];
+    gachaRemaining: number;
+    discardUsed: number;
+  } {
+    return {
+      hand: s.hand.map((h) => ({ ...h })),
+      deck: [...s.deck],
+      gachaRemaining: s.gachaRemaining,
+      discardUsed: s.stats.discardUsed,
+    };
+  }
+
+  /** 直前の交換を取り消せるか（T-057）。UI のスナックバー表示判定に使う。 */
+  canUndoExchange(s: GameSession): boolean {
+    return s.phase === 'playing' && this.exchangeSnapshot !== null;
+  }
+
+  /**
+   * 直前の交換を取り消す（Undo・T-057）。hand/deck/gachaRemaining/discardUsed を
+   * 交換前のスナップショットへ完全復元する（直前1回のみ・次の操作で無効化）。
+   * RNG は巻き戻さない：「交換→Undo→再交換」で2回目の結果が変わるのは仕様
+   * （シャッフル/抽選で乱数を消費済みのため。デイリーの列再現には影響しない）。
+   */
+  undoExchange(s: GameSession): void {
+    const snap = this.exchangeSnapshot;
+    if (snap === null || s.phase !== 'playing') return;
+    this.exchangeSnapshot = null;
+
+    s.hand = snap.hand.map((h) => ({ ...h }));
+    s.deck = [...snap.deck];
+    s.gachaRemaining = snap.gachaRemaining;
+    s.stats.discardUsed = snap.discardUsed;
+    this.publish();
+  }
+
   /**
    * ヒント（PRD F5）。RescueService に委譲し、合体可能な1組を返す。提供できた場合のみ KPI を加算。
    * むず＝利用不可・残不足・詰みは null（コスト消費なし）。
    */
   useHint(s: GameSession): HandPart[] | null {
     if (s.phase !== 'playing') return null;
+    this.exchangeSnapshot = null; // 次の操作で Undo は無効（T-057）
 
     let hint: HandPart[] | null;
     if (s.gameMode === 'deck') {
