@@ -411,6 +411,36 @@ describe('SessionManager 救済（deck モード）', () => {
     expect(s.hand).toEqual(hand);
   });
 
+  it('undoExchange：deck の重複合体（無効 no-op）では直前の Undo を失わない', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = ['ki', 'ki', 'kuchi', 'onna'];
+    s.gachaRemaining = s.deck.length;
+    setHand(s, ['ki', 'ki']);
+    sm.combine(s, [...s.hand]); // 林 を作成（createdKanji に登録）
+    setHand(s, ['onna', 'ki', 'ki']); // t0=onna, t1=ki, t2=ki
+    sm.exchangeCards(s, ['t0']); // Undo 対象が発生
+    expect(sm.canUndoExchange(s)).toBe(true);
+
+    // 既出の 林（ki+ki）を再度合体 → duplicate（無効・ノーペナルティ no-op）
+    // 交換後の手札は [t1:ki, t2:ki, 補充1枚] の順（t0 除去→末尾に補充）。
+    const dup = sm.combine(s, [s.hand[0], s.hand[1]]);
+    expect(dup.duplicate).toBe(true);
+    expect(sm.canUndoExchange(s)).toBe(true); // Undo は温存される
+  });
+
+  it('undoExchange：合体ミス（状態変化あり）では Undo が無効化される', () => {
+    const { sm } = makeSM();
+    const s = sm.start('elementary', 'free');
+    s.deck = ['ki', 'kuchi'];
+    s.gachaRemaining = s.deck.length;
+    setHand(s, ['onna', 'ki', 'kuchi']);
+    sm.exchangeCards(s, ['t0']);
+    expect(sm.canUndoExchange(s)).toBe(true);
+    sm.combine(s, [s.hand[0], s.hand[1]]); // 辞書に無い組 → ミス（コンボ/KPI 変化）
+    expect(sm.canUndoExchange(s)).toBe(false);
+  });
+
   it('undoExchange：交換していない状態では no-op（canUndo=false）', () => {
     const { sm } = makeSM();
     const s = sm.start('elementary', 'free');
@@ -688,6 +718,24 @@ describe('SessionManager タイムアタック（T-027）', () => {
     });
     return { sm, storage, persistedStore, clock };
   }
+
+  it('undoExchange（timeAttack）：コスト不足の再交換 no-op では直前の Undo を失わない', () => {
+    const { sm } = makeTA();
+    const s = sm.start('joyo', 'free', 'timeAttack'); // むず：1枚あたり -2
+    setHand(s, ['ki', 'kuchi', 'onna', 'ko', 'hi']);
+    sm.exchangeCards(s, ['t0']); // 残 10-2=8・Undo 対象が発生
+    expect(sm.canUndoExchange(s)).toBe(true);
+    const afterFirst = {
+      hand: s.hand.map((h) => ({ ...h })),
+      remaining: s.gachaRemaining,
+    };
+
+    s.gachaRemaining = 3; // 2枚交換（コスト4）には不足の状態を作る
+    sm.exchangeCards(s, [s.hand[0].instanceId, s.hand[1].instanceId]);
+    expect(s.hand).toEqual(afterFirst.hand); // no-op（何も変わらない）
+    expect(s.gachaRemaining).toBe(3);
+    expect(sm.canUndoExchange(s)).toBe(true); // Undo は温存される
+  });
 
   it('undoExchange（timeAttack）：コスト（gachaRemaining）ごと復元する（T-057）', () => {
     const { sm } = makeTA();

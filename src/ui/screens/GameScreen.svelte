@@ -379,16 +379,19 @@
     clearRevealTimer();
     reveal = null;
     const count = selectedIds.length;
+    const discardBefore = s.stats.discardUsed;
     // 選択カードを一括で交換（選択枚数ぶんを引き直す・手札枚数は不変）。
     sessionManager.exchangeCards(s, selectedIds);
     selectedIds = [];
     resetHint();
     feedback = '';
     floatInfo = null;
-    // 実行できた場合のみ Undo を提示（残不足 no-op ではスナップショットが無い）。
+    // Undo の提示（T-057）。今回実行できた場合は今回の枚数で表示し直す。
+    // 残不足 no-op の場合、直前の有効な Undo（前回の枚数）が残っていれば表示を維持する。
+    const executed = s.stats.discardUsed > discardBefore;
     hideUndo();
     if (sessionManager.canUndoExchange(s)) {
-      undoCount = count;
+      if (executed) undoCount = count;
       undoVisible = true;
       undoTimer = setTimeout(() => {
         undoVisible = false;
