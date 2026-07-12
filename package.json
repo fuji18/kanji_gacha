@@ -33,7 +33,7 @@
     "@playwright/test": "^1.60.0",
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "@types/node": "^22.8.0",
-    "@vitest/coverage-v8": "^2.1.0",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9.13.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^4.4.5",
