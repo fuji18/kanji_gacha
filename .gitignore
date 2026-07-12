@@ -12,6 +12,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# vite-plugin-pwa の開発時SW生成物（repository-structure 8.1）
+dev-dist/
+
 # Environment variables
 .env
 .env.local
@@ -35,6 +38,8 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
 
 # Steering files (task management - temporary)
 .steering/*

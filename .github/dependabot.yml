@@ -1,0 +1,19 @@
+# 依存関係の継続監査（T-060）。ランタイムは外部通信ゼロだが、ビルド時の
+# サプライチェーン（vite / svelte / workbox 等）の脆弱性を週次で検知する。
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # lockfile のみの更新もまとめて提案させる
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

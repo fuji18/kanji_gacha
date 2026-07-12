@@ -1,0 +1,270 @@
+/*
+ * 軽量演出（T-018 / architecture 2.3）。Canvas で描かない部分を CSS で担う。
+ * すべて GPU 合成しやすい transform/opacity 中心。`prefers-reduced-motion: reduce` で無効化する。
+ * グローバルクラスとして GameScreen / PartChip から利用する。
+ */
+
+/* ガチャ出現：チップがマウントされた瞬間に1回だけ再生（カプセルがポンと出る手触り）。 */
+@keyframes kg-capsule-pop {
+  0% {
+    transform: scale(0.2) translateY(-8px);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 失敗：赤いシェイク。 */
+@keyframes kg-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-5px);
+  }
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+/* スコア/読み・意味の浮上表示。 */
+@keyframes kg-score-float {
+  0% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  15% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-28px);
+    opacity: 0;
+  }
+}
+
+.kg-capsule-pop {
+  animation: kg-capsule-pop 0.32s ease-out;
+}
+
+.kg-shake {
+  animation: kg-shake 0.4s ease-in-out;
+}
+
+.kg-shake-target--miss {
+  outline: 2px solid #e53935;
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
+
+.kg-score-float {
+  animation: kg-score-float 1.1s ease-out forwards;
+}
+
+/* レアリティグロウ（★が高いほど強い）。--rarity-color は PartChip が指定。 */
+.kg-glow-3 {
+  box-shadow: 0 0 4px var(--rarity-color);
+}
+.kg-glow-4 {
+  box-shadow: 0 0 8px var(--rarity-color);
+}
+.kg-glow-5 {
+  box-shadow:
+    0 0 12px var(--rarity-color),
+    0 0 4px var(--rarity-color);
+}
+
+/* ===== handoff design 由来の演出（和風モダン） ===== */
+
+/* 合体プロンプト「合」の上下脈動（2枚選択＝合体可能で点滅）。 */
+@keyframes kg-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* 学習カードの浮き上がり出現。 */
+@keyframes kg-float {
+  0% {
+    transform: translateY(16px) scale(0.92);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-3px) scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 合体成功時の金の閃光（拡がって消える）。 */
+@keyframes kg-splash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  30% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.7);
+  }
+}
+
+/* 完成漢字の出現（下からせり上がる）。 */
+@keyframes kg-reveal {
+  0% {
+    opacity: 0.5;
+    transform: translateY(6px) scale(0.88);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 主要アクション（合体！）が押せる状態の金リング点滅。 */
+@keyframes kg-ready {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+  }
+  50% {
+    box-shadow: 0 0 17px 3px rgba(212, 175, 55, 0.65);
+  }
+}
+
+/* ガチャ巻物の常時グロウ。 */
+@keyframes kg-scroll-glow {
+  0%,
+  100% {
+    box-shadow: var(--md-sys-elevation-1);
+  }
+  50% {
+    box-shadow:
+      var(--md-sys-elevation-1),
+      0 0 22px rgba(212, 175, 55, 0.5);
+  }
+}
+
+/* 舞い散る花びら（2経路）と金の粒のきらめき、コンボ炎（handoff design）。 */
+@keyframes kg-fall-a {
+  0% {
+    transform: translateY(-26px) translateX(0) rotate(0);
+  }
+  50% {
+    transform: translateY(48vh) translateX(24px) rotate(180deg);
+  }
+  100% {
+    transform: translateY(102vh) translateX(-6px) rotate(360deg);
+  }
+}
+@keyframes kg-fall-b {
+  0% {
+    transform: translateY(-26px) translateX(0) rotate(0);
+  }
+  50% {
+    transform: translateY(48vh) translateX(-28px) rotate(-160deg);
+  }
+  100% {
+    transform: translateY(102vh) translateX(8px) rotate(-330deg);
+  }
+}
+@keyframes kg-twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+@keyframes kg-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 4px) scale(0.8);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -46px) scale(1);
+  }
+}
+@keyframes kg-flame {
+  0%,
+  100% {
+    transform: scale(1) rotate(-2deg);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.18) rotate(2deg);
+    opacity: 1;
+  }
+}
+
+.kg-pulse {
+  animation: kg-pulse 1.1s ease-in-out infinite;
+}
+.kg-float {
+  animation: kg-float 0.5s ease both;
+}
+.kg-splash {
+  animation: kg-splash 0.6s ease forwards;
+}
+.kg-reveal {
+  animation: kg-reveal 0.5s ease both;
+}
+.kg-ready {
+  animation: kg-ready 1.2s ease-in-out infinite;
+}
+.kg-scroll-glow {
+  animation: kg-scroll-glow 1.8s ease-in-out infinite;
+}
+
+/* モーション軽減：派手なアニメーションは無効化（瞬時表示にする）。 */
+@media (prefers-reduced-motion: reduce) {
+  .kg-capsule-pop,
+  .kg-shake,
+  .kg-score-float,
+  .kg-pulse,
+  .kg-float,
+  .kg-splash,
+  .kg-reveal,
+  .kg-ready,
+  .kg-scroll-glow,
+  .kg-flame {
+    animation: none;
+  }
+  /* 光感度配慮：グロウも抑制する。 */
+  .kg-glow-3,
+  .kg-glow-4,
+  .kg-glow-5 {
+    box-shadow: none;
+  }
+}

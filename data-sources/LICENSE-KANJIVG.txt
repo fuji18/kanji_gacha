@@ -1,0 +1,19 @@
+KanjiVG — License notice
+========================
+
+The kanji component decomposition distilled into `kanjivg-decomp.json` is derived
+from the KanjiVG project (kanji stroke order / component data).
+
+  - Project: KanjiVG
+  - Copyright: Ulrich Apel and the KanjiVG contributors
+  - Licence: Creative Commons Attribution-ShareAlike 3.0 Unported
+             (CC BY-SA 3.0)  https://creativecommons.org/licenses/by-sa/3.0/
+  - Home: https://kanjivg.tagaini.net/
+
+Usage in this repository: KanjiVG's recursive composition trees are used as a
+substitute for KRADFILE (radical decomposition). Each kanji's tree is normalized
+to a single-level (depth-1) list of components by descending to the shallowest
+nodes that carry an `element` label.
+
+Per the ShareAlike (SA) obligation, derived data distributed in this repository
+(`public/data/*.json`) is provided under CC BY-SA. See `public/data/LICENSE.txt`.

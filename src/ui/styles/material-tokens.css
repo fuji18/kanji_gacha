@@ -1,0 +1,161 @@
+/*
+ * Material Design 3 デザイントークン × 和風パレット（T: 和風Material UIリファクタ）。
+ * 全画面はこの CSS 変数のみを参照する。Google Fonts 等の外部CDNは使わず（CSP default-src 'self'）、
+ * 筆文字は見出し・ボタン用に subset を自前ホストする。
+ */
+
+/* 見出し・ボタン用の筆文字（Yuji Syuku サブセット・OFL 1.1）。src 相対参照で Vite が
+   ハッシュ付与・base path 解決・PWA プリキャッシュ（globPatterns）を担う。 */
+@font-face {
+  font-family: 'KG Yuji Syuku UI';
+  src: url('./fonts/yuji-syuku-ui.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ===== カラー（和風 → Material ロール） ===== */
+  --md-sys-color-primary: #c0392b; /* 朱 */
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #f6dedb;
+  --md-sys-color-on-primary-container: #4a0e08;
+
+  --md-sys-color-secondary: #2c3e6b; /* 藍 */
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #dde3f3;
+  --md-sys-color-on-secondary-container: #0e1a3a;
+
+  /* 金（テキスト用・T-055）：和紙 #f5f1e6 上で 4.7:1（AA 準拠）。
+     旧 #b8860b は 2.9:1 で不適合だったため暗化した。装飾（罫線・グロウ・落款）には
+     --md-sys-color-tertiary-bright / --kg-color-gold-deep を使うこと。 */
+  --md-sys-color-tertiary: #8a6508;
+  --md-sys-color-tertiary-bright: #d4af37; /* 金（装飾用） */
+  --md-sys-color-on-tertiary: #ffffff; /* #8a6508 上で 5.3:1（AA） */
+  --md-sys-color-tertiary-container: #f6eccf;
+  --md-sys-color-on-tertiary-container: #4a3a05;
+
+  --md-sys-color-surface: #f5f1e6; /* 和紙 */
+  --md-sys-color-on-surface: #2b2b2b; /* 墨 */
+  --md-sys-color-surface-container-low: #f0ebdc;
+  --md-sys-color-surface-container: #eae2cf;
+  --md-sys-color-surface-container-high: #e6dcc4;
+  --md-sys-color-on-surface-variant: #5c5645;
+
+  --md-sys-color-outline: #8a8268;
+  --md-sys-color-outline-variant: #d6cdb4;
+  --md-sys-color-error: #b3261e;
+
+  /* ===== 和風装飾（handoff design 由来。CDN不使用・自前トークン化） ===== */
+  --kg-color-gold-deep: #b8860b; /* 金（濃・テキスト可読） */
+  --kg-color-gold-bright: #d4af37; /* 金（装飾・グロウ） */
+  --kg-color-vermilion-deep: #a72d1f; /* 朱（巻物の濃部） */
+  --kg-color-vermilion-bright: #d24532; /* 朱（巻物の明部） */
+  --kg-color-indigo-night-1: #34467a; /* 藍夜（上） */
+  --kg-color-indigo-night-2: #1c2848; /* 藍夜（中） */
+  --kg-color-indigo-night-3: #141d36; /* 藍夜（下） */
+  --kg-color-ink-bg: #211d17; /* 墨地（ページ余白の最暗部） */
+  /* 学習カード・巻物など浮遊要素の強い影。 */
+  --kg-elevation-float:
+    0 16px 34px rgba(90, 60, 20, 0.22), 0 2px 8px rgba(43, 43, 43, 0.12);
+
+  /* 下部アクションバーの半透明和紙地（本文の上に固定して親指リーチを良くする）。 */
+  --kg-surface-bar: rgba(245, 241, 230, 0.92);
+  /* 和風3Dボタンの沈み込み量（filled raised の box-shadow 基準）。 */
+  --kg-btn-raise: 4px;
+  /* キーボード/タッチ操作のフォーカスリング（金）。 */
+  --kg-focus-ring: 0 0 0 3px rgba(212, 175, 55, 0.6);
+
+  /* ===== 形状（角丸） ===== */
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-full: 999px;
+
+  /* ===== エレベーション ===== */
+  --md-sys-elevation-1:
+    0 1px 2px rgba(43, 43, 43, 0.18), 0 1px 3px rgba(43, 43, 43, 0.1);
+  --md-sys-elevation-2:
+    0 2px 4px rgba(43, 43, 43, 0.2), 0 1px 6px rgba(43, 43, 43, 0.12);
+  --md-sys-elevation-3:
+    0 4px 8px rgba(43, 43, 43, 0.22), 0 2px 12px rgba(43, 43, 43, 0.14);
+
+  /* ===== 書体 ===== */
+  /* 動的な漢字パーツ用のブラシ感（明朝系システムフォント）。 */
+  --md-ref-typeface-kanji:
+    'Hiragino Mincho ProN', 'Yu Mincho', 'YuMincho', 'Noto Serif JP', serif;
+  /* 見出し・ボタン用の自前ホスト筆文字＋明朝フォールバック。 */
+  --md-ref-typeface-brand:
+    'KG Yuji Syuku UI', 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP',
+    serif;
+  /* 本文・UIテキスト用のサンセリフ。 */
+  --md-ref-typeface-plain:
+    system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+
+  /* ===== タイプスケール（Material 3 / 16px 基準・rem） =====
+     Material Design 3 の標準タイプスケールに準拠。本文は最小でも body-small=12px、
+     ラベルは label-small=11px を下限とし、極小フォントを避ける（可読性・準拠）。 */
+  --md-sys-typescale-display-large: 3.5625rem; /* 57 */
+  --md-sys-typescale-display-medium: 2.8125rem; /* 45 */
+  --md-sys-typescale-display-small: 2.25rem; /* 36 */
+  --md-sys-typescale-headline-large: 2rem; /* 32 */
+  --md-sys-typescale-headline-medium: 1.75rem; /* 28 */
+  --md-sys-typescale-headline-small: 1.5rem; /* 24 */
+  --md-sys-typescale-title-large: 1.375rem; /* 22 */
+  --md-sys-typescale-title-medium: 1rem; /* 16 */
+  --md-sys-typescale-title-small: 0.875rem; /* 14 */
+  --md-sys-typescale-body-large: 1rem; /* 16 */
+  --md-sys-typescale-body-medium: 0.875rem; /* 14 */
+  --md-sys-typescale-body-small: 0.75rem; /* 12 */
+  --md-sys-typescale-label-large: 0.875rem; /* 14 */
+  --md-sys-typescale-label-medium: 0.75rem; /* 12 */
+  --md-sys-typescale-label-small: 0.6875rem; /* 11 */
+
+  /* 後方互換エイリアス（既存参照用。Material の標準ステップへ対応付け）。 */
+  --md-sys-typescale-display-size: var(--md-sys-typescale-display-small);
+  --md-sys-typescale-headline-size: var(--md-sys-typescale-headline-small);
+  --md-sys-typescale-title-size: var(--md-sys-typescale-title-large);
+  --md-sys-typescale-body-size: var(--md-sys-typescale-body-medium);
+  --md-sys-typescale-label-size: var(--md-sys-typescale-label-medium);
+}
+
+/* ===== ダークテーマ（OS 追随・T-055） =====
+   トークンの上書きのみで全画面をダーク化する（各画面はトークン参照のみの規約）。
+   夜の和紙（暗い生成り地×明るい墨）に、朱・藍・金を暗地で可読な明度へ調整。
+   主要ペアのコントラストは AA（本文 4.5:1）以上を実測確認済み：
+   on-surface 12.8:1 / secondary 7.4:1 / primary 5.0:1 / tertiary(金) 7.5:1。 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --md-sys-color-primary: #e66a58; /* 朱（明・テキスト可読） */
+    --md-sys-color-on-primary: #3a0d07;
+    --md-sys-color-primary-container: #5a170e;
+    --md-sys-color-on-primary-container: #f6dedb;
+
+    --md-sys-color-secondary: #9fb0e0; /* 藍（明） */
+    --md-sys-color-on-secondary: #0e1a3a;
+    --md-sys-color-secondary-container: #24304f;
+    --md-sys-color-on-secondary-container: #dde3f3;
+
+    --md-sys-color-tertiary: #d4af37; /* 金：暗地では明るい金がテキスト可読 */
+    --md-sys-color-on-tertiary: #241a08;
+    --md-sys-color-tertiary-container: #4a3a05;
+    --md-sys-color-on-tertiary-container: #f6eccf;
+
+    --md-sys-color-surface: #26221b; /* 夜の和紙 */
+    --md-sys-color-on-surface: #ece7d8;
+    --md-sys-color-surface-container-low: #2c2820;
+    --md-sys-color-surface-container: #332e25;
+    --md-sys-color-surface-container-high: #3a352a;
+    --md-sys-color-on-surface-variant: #b5ac95;
+
+    --md-sys-color-outline: #8a8268;
+    --md-sys-color-outline-variant: #4a4436;
+    --md-sys-color-error: #f2b8b5;
+
+    /* 下部アクションバーも夜の和紙に追随させる。 */
+    --kg-surface-bar: rgba(38, 34, 27, 0.92);
+    /* 浮遊要素の影は暗地では黒を深めに。 */
+    --kg-elevation-float:
+      0 16px 34px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+}

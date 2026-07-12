@@ -1,0 +1,3 @@
+# 変更ファイルのみ整形/lint。typecheck（全体）はコミットを軽く保つため CI に委譲する
+# （development-guidelines 6.4 の注記に従う）。
+npx lint-staged
